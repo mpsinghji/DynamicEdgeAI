@@ -2,44 +2,41 @@ package com.dynamicedgeai.engine
 
 import com.dynamicedgeai.monitor.DeviceState
 import com.dynamicedgeai.monitor.NetworkQuality
-import com.dynamicedgeai.monitor.ThermalState
 
 class DecisionEngine {
 
-    fun determineStrategy(state: DeviceState): ExecutionStrategy {
-        // High Thermal Stress -> Offload to Cloud if network allows, else throttle to Lightweight
-        if (state.thermalState == ThermalState.CRITICAL || state.thermalState == ThermalState.SEVERE) {
-            return if (state.networkQuality == NetworkQuality.EXCELLENT || state.networkQuality == NetworkQuality.GOOD) {
-                ExecutionStrategy.CLOUD_ONLY
-            } else {
-                ExecutionStrategy.LOCAL_LIGHTWEIGHT
+    fun determineStrategyDetail(state: DeviceState): StrategyDetail {
+        return when {
+            // Cloud Heavy Conditions: Excellent Network and High RAM
+            state.networkQuality == NetworkQuality.EXCELLENT && state.ramAvailable > 2000 -> {
+                StrategyDetail(
+                    mode = ExecutionStrategy.CLOUD_HEAVY,
+                    modelName = "Gemini API (Powerful 32B Model)",
+                    reason = "High RAM availability and excellent network detected. Switching to powerful cloud-based model for enhanced capabilities.",
+                    latency = "1.5s",
+                    networkUsed = "Yes"
+                )
+            }
+            // Hybrid Conditions: Sufficient RAM and Strong/Moderate Network
+            state.ramAvailable > 1000 && (state.networkQuality == NetworkQuality.GOOD || state.networkQuality == NetworkQuality.MODERATE) -> {
+                StrategyDetail(
+                    mode = ExecutionStrategy.HYBRID,
+                    modelName = "DeepSeek Lite (1.5B 4-bit) + Gemini API",
+                    reason = "Sufficient RAM and strong network detected. Utilizing both local model and cloud inference for balanced performance.",
+                    latency = "2.1s",
+                    networkUsed = "Yes"
+                )
+            }
+            // Local Lightweight: Default fallback for low RAM or weak network
+            else -> {
+                StrategyDetail(
+                    mode = ExecutionStrategy.LOCAL_LIGHTWEIGHT,
+                    modelName = "DeepSeek Lite (1.5B 4-bit)",
+                    reason = "RAM is limited, network is weak. Switching to local lightweight model to optimize resources.",
+                    latency = "3.2s",
+                    networkUsed = "No"
+                )
             }
         }
-
-        // Low Battery -> Offload to Cloud to save local processing energy if network is excellent
-        if (state.batteryLevel < 15.0f && !state.isCharging) {
-            return if (state.networkQuality == NetworkQuality.EXCELLENT) {
-                ExecutionStrategy.CLOUD_ONLY
-            } else {
-                ExecutionStrategy.LOCAL_LIGHTWEIGHT
-            }
-        }
-
-        // High CPU Usage or Low RAM -> Avoid Heavyweight local model
-        if (state.cpuUsage > 80 || state.ramAvailable < 400) {
-             return if (state.networkQuality == NetworkQuality.EXCELLENT || state.networkQuality == NetworkQuality.GOOD) {
-                ExecutionStrategy.CLOUD_ONLY
-            } else {
-                ExecutionStrategy.LOCAL_LIGHTWEIGHT
-            }
-        }
-
-        // Optimal Conditions: Good Battery, Normal Thermals, Available Resources
-        if (state.batteryLevel > 30.0f && state.thermalState == ThermalState.NORMAL && state.ramAvailable > 800) {
-            return ExecutionStrategy.LOCAL_HEAVYWEIGHT
-        }
-
-        // Default to local lightweight for balance
-        return ExecutionStrategy.LOCAL_LIGHTWEIGHT
     }
 }
