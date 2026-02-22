@@ -1,0 +1,15 @@
+R_DEF: Internal format may change without notice
+local
+id batteryText
+id cpuText
+id inferenceResultText
+id networkText
+id ramText
+id runTaskButton
+id strategyLabel
+id strategyText
+id subtitle
+id thermalText
+id title
+layout activity_main
+string app_name

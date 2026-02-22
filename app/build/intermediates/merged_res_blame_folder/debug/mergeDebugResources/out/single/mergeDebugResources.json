@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "C:\\Users\\manpr\\.gradle\\daemon\\8.13\\com.dynamicedgeai.app-debug-33:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\manpr\\.gradle\\daemon\\8.13\\com.dynamicedgeai.app-main-35:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "com.dynamicedgeai.app-debug-33:/layout_activity_main.xml.flat",
+        "source": "com.dynamicedgeai.app-main-35:/layout/activity_main.xml"
+    }
+]

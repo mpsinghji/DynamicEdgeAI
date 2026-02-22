@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Dynamic Edge AI"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/subtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Real-time Resource Monitor"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/batteryText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Battery Level: Calculating..."
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/thermalText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Thermal State: Calculating..."
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/networkText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Network Quality: Calculating..."
+        android:layout_marginBottom="32dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@android:color/darker_gray"
+        android:layout_marginBottom="32dp" />
+
+    <TextView
+        android:id="@+id/strategyLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="AI Execution Strategy"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/strategyText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Current Mode: Calculating..."
+        android:layout_marginBottom="32dp" />
+
+    <Button
+        android:id="@+id/runTaskButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Run Adaptive Inference" />
+
+</LinearLayout>
