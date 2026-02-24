@@ -1,19 +1,42 @@
 package com.dynamicedgeai
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.LayoutInflater
+import android.view.View
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.dynamicedgeai.engine.DecisionEngine
 import com.dynamicedgeai.engine.ExecutionStrategy
+import com.dynamicedgeai.ml.CloudAIEngine
+import com.dynamicedgeai.ml.LocalAIEngine
 import com.dynamicedgeai.monitor.*
+import com.google.gson.Gson
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
+
+    private val GEMINI_API_KEY = "AIzaSyCF7VizsgjqQQG3SFSE3CDw1hzMueFvvsM"
 
     private lateinit var batteryMonitor: BatteryMonitor
     private lateinit var thermalMonitor: ThermalMonitor
@@ -21,40 +44,70 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cpuMonitor: CpuMonitor
     private lateinit var ramMonitor: RamMonitor
     private val decisionEngine = DecisionEngine()
+    
+    private val cloudAIEngine = CloudAIEngine()
+    private val localAIEngine = LocalAIEngine()
+    private val gson = Gson()
 
     private lateinit var ramLabel: TextView
     private lateinit var cpuLabel: TextView
     private lateinit var networkLabel: TextView
     private lateinit var batteryLabel: TextView
-    
     private lateinit var ramIndicator: ImageView
     private lateinit var cpuIndicator: ImageView
-    
     private lateinit var insightModeText: TextView
-    private lateinit var execInfoTitle: TextView
-    private lateinit var strategyModel: TextView
-    private lateinit var strategyReason: TextView
-    private lateinit var strategyLatency: TextView
-    private lateinit var strategyNetworkUsed: TextView
+    
+    private lateinit var insightsToggle: View
+    private lateinit var insightsContainer: View
+    private lateinit var insightsChevron: ImageView
+    private var isInsightsVisible = true
+
+    private lateinit var messageInput: EditText
+    private lateinit var sendButton: ImageButton
+    private lateinit var chatContainer: LinearLayout
+    private lateinit var chatScrollView: ScrollView
+    private lateinit var thinkingIndicator: LinearLayout
+    private lateinit var thinkingText: TextView
+    
+    private var lastKnownState: DeviceState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Initialize UI components
         ramLabel = findViewById(R.id.ramLabel)
         cpuLabel = findViewById(R.id.cpuLabel)
         networkLabel = findViewById(R.id.networkLabel)
         batteryLabel = findViewById(R.id.batteryLabel)
-        
         ramIndicator = findViewById(R.id.ramIndicator)
         cpuIndicator = findViewById(R.id.cpuIndicator)
-
         insightModeText = findViewById(R.id.insightModeText)
-        execInfoTitle = findViewById(R.id.execInfoTitle)
-        strategyModel = findViewById(R.id.strategyModel)
-        strategyReason = findViewById(R.id.strategyReason)
-        strategyLatency = findViewById(R.id.strategyLatency)
-        strategyNetworkUsed = findViewById(R.id.strategyNetworkUsed)
+
+        insightsToggle = findViewById(R.id.insightsToggle)
+        insightsContainer = findViewById(R.id.insightsContainer)
+        insightsChevron = findViewById(R.id.insightsInfoIcon) 
+
+        messageInput = findViewById(R.id.messageInput)
+        sendButton = findViewById(R.id.sendButton)
+        chatContainer = findViewById(R.id.chatContainer)
+        chatScrollView = findViewById(R.id.chatScrollView)
+        thinkingIndicator = findViewById(R.id.thinkingIndicator)
+        thinkingText = findViewById(R.id.thinkingText)
+
+        insightsToggle.setOnClickListener { toggleInsights() }
+
+        sendButton.setOnClickListener { trySendMessage() }
+
+        messageInput.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_SEND || 
+                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
+                trySendMessage()
+                true
+            } else {
+                false
+            }
+        }
 
         batteryMonitor = BatteryMonitor(this)
         thermalMonitor = ThermalMonitor(this)
@@ -63,6 +116,132 @@ class MainActivity : AppCompatActivity() {
         ramMonitor = RamMonitor(this)
 
         startResourceMonitoring()
+    }
+
+    private fun trySendMessage() {
+        val text = messageInput.text.toString()
+        if (text.isNotBlank()) {
+            handleUserMessage(text)
+        }
+    }
+
+    private fun toggleInsights() {
+        isInsightsVisible = !isInsightsVisible
+        if (isInsightsVisible) {
+            insightsContainer.visibility = View.VISIBLE
+            insightsChevron.animate().rotation(0f).setDuration(300).start()
+        } else {
+            insightsContainer.visibility = View.GONE
+            insightsChevron.animate().rotation(180f).setDuration(300).start()
+        }
+    }
+
+    private fun handleUserMessage(text: String) {
+        messageInput.text.clear()
+        addUserBubble(text)
+        scrollToBottom()
+        
+        lifecycleScope.launch {
+            showThinking()
+            val state = lastKnownState ?: DeviceState()
+            val detail = decisionEngine.determineStrategyDetail(state)
+            
+            val aiResponse = when(detail.mode) {
+                ExecutionStrategy.CLOUD_HEAVY, ExecutionStrategy.HYBRID -> {
+                    cloudAIEngine.runCloudModel(GEMINI_API_KEY, text)
+                }
+                ExecutionStrategy.LOCAL_LIGHTWEIGHT -> {
+                    delay(1500)
+                    "I am responding using my on-device lightweight model to save your battery and data."
+                }
+            }
+            
+            hideThinking()
+            addAIResponse(aiResponse, detail)
+            scrollToBottom()
+        }
+    }
+
+    private fun addUserBubble(text: String) {
+        val view = LayoutInflater.from(this).inflate(R.layout.item_chat_user, chatContainer, false)
+        val msgText = view.findViewById<TextView>(R.id.messageText)
+        msgText.text = text
+        val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        view.findViewById<TextView>(R.id.timestamp).text = timeStr
+
+        val bubbleContainer = view.findViewById<View>(R.id.userBubbleContainer)
+        val actionsLayout = view.findViewById<View>(R.id.userActions)
+        val copyBtn = view.findViewById<ImageButton>(R.id.copyButton)
+        val editBtn = view.findViewById<ImageButton>(R.id.editButton)
+
+        // Toggle actions on click
+        bubbleContainer.setOnClickListener {
+            actionsLayout.visibility = if (actionsLayout.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        }
+
+        copyBtn.setOnClickListener {
+            copyToClipboard(text)
+            actionsLayout.visibility = View.GONE
+        }
+
+        editBtn.setOnClickListener {
+            messageInput.setText(text)
+            messageInput.requestFocus()
+            actionsLayout.visibility = View.GONE
+        }
+
+        val animation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
+        view.startAnimation(animation)
+        chatContainer.addView(view)
+    }
+
+    private fun addAIResponse(response: String, detail: com.dynamicedgeai.engine.StrategyDetail) {
+        val view = LayoutInflater.from(this).inflate(R.layout.item_chat_ai, chatContainer, false)
+        view.findViewById<TextView>(R.id.messageText).text = response
+        view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${detail.mode.name}"
+        view.findViewById<TextView>(R.id.reasonText).text = detail.reason
+
+        val bubbleContainer = view.findViewById<View>(R.id.aiBubbleContainer)
+        val actionsLayout = view.findViewById<View>(R.id.aiActions)
+        val copyBtn = view.findViewById<ImageButton>(R.id.copyButton)
+
+        bubbleContainer.setOnClickListener {
+            actionsLayout.visibility = if (actionsLayout.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        }
+
+        copyBtn.setOnClickListener {
+            copyToClipboard(response)
+            actionsLayout.visibility = View.GONE
+        }
+        
+        val animation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
+        view.startAnimation(animation)
+        chatContainer.addView(view)
+    }
+
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("AI Message", text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showThinking() {
+        thinkingIndicator.visibility = View.VISIBLE
+        val anim = AlphaAnimation(0.3f, 1.0f)
+        anim.duration = 600
+        anim.repeatMode = Animation.REVERSE
+        anim.repeatCount = Animation.INFINITE
+        thinkingText.startAnimation(anim)
+    }
+
+    private fun hideThinking() {
+        thinkingText.clearAnimation()
+        thinkingIndicator.visibility = View.GONE
+    }
+
+    private fun scrollToBottom() {
+        chatScrollView.post { chatScrollView.fullScroll(View.FOCUS_DOWN) }
     }
 
     private fun startResourceMonitoring() {
@@ -83,25 +262,22 @@ class MainActivity : AppCompatActivity() {
                     ramAvailable = ram
                 )
             }.collect { state ->
+                lastKnownState = state
                 updateUI(state)
             }
         }
     }
 
     private fun updateUI(state: DeviceState) {
-        // RAM Free formatting
         val ramFormatted = if (state.ramAvailable > 1024) String.format(Locale.US, "%.1f GB", state.ramAvailable / 1024f) else "${state.ramAvailable} MB"
         ramLabel.text = "RAM Free: $ramFormatted"
         
-        // Dynamic Indicator Logic
-        // RAM: Green if > 800MB, Orange if > 400MB, Red otherwise
         ramIndicator.setImageResource(when {
             state.ramAvailable > 800 -> R.drawable.ic_check_green
             state.ramAvailable > 400 -> R.drawable.dot_orange
             else -> R.drawable.dot_red
         })
 
-        // CPU: Green if < 40%, Orange if < 80%, Red otherwise
         cpuLabel.text = "CPU Usage: ${state.cpuUsage}%"
         cpuIndicator.setImageResource(when {
             state.cpuUsage < 40 -> R.drawable.dot_green
@@ -109,23 +285,18 @@ class MainActivity : AppCompatActivity() {
             else -> R.drawable.dot_red
         })
         
-        // Network status display
         val networkIcon = if (state.networkQuality != NetworkQuality.POOR && state.networkQuality != NetworkQuality.UNKNOWN) "🔄" else "⚠️"
         val networkStr = when(state.networkQuality) {
-            NetworkQuality.EXCELLENT -> "EXCELLENT (85 Mbps)"
+            NetworkQuality.EXCELLENT -> "STRONG (85 Mbps)"
             NetworkQuality.GOOD -> "STRONG (25 Mbps)"
             NetworkQuality.MODERATE -> "MODERATE (10 Mbps)"
             NetworkQuality.POOR -> "WEAK (3 Mbps)"
-            NetworkQuality.UNKNOWN -> "UNKNOWN"
+            else -> "UNKNOWN"
         }
         networkLabel.text = "Network: $networkIcon $networkStr"
-        
         batteryLabel.text = "Battery Level: ${state.batteryLevel.toInt()}%"
 
-        // Decision Engine Strategy
         val detail = decisionEngine.determineStrategyDetail(state)
-        
-        // System Insights Section update
         insightModeText.text = detail.mode.name
         val modeColor = when(detail.mode) {
             ExecutionStrategy.LOCAL_LIGHTWEIGHT -> R.color.mode_local
@@ -133,12 +304,5 @@ class MainActivity : AppCompatActivity() {
             ExecutionStrategy.CLOUD_HEAVY -> R.color.mode_cloud
         }
         insightModeText.setTextColor(ContextCompat.getColor(this, modeColor))
-
-        // Execution Info Section update
-        execInfoTitle.text = "Execution Info: ${detail.mode.name}"
-        strategyModel.text = "Models Used: ${detail.modelName}"
-        strategyReason.text = "Decision Reason: ${detail.reason}"
-        strategyLatency.text = "Latency: ${detail.latency}"
-        strategyNetworkUsed.text = "Network Used: ${detail.networkUsed}"
     }
 }

@@ -3,21 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8F9FA">
+    android:background="#FDFDFD">
 
-    <!-- Header -->
-    <LinearLayout
+    <!-- Header Area -->
+    <RelativeLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"
-        android:orientation="vertical"
         android:padding="16dp"
         android:elevation="1dp">
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -25,273 +25,187 @@
                 android:textColor="#333333"
                 android:textSize="20sp"
                 android:textStyle="bold" />
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_alignParentEnd="true"
-                android:src="@drawable/ic_ai_small"
-                app:tint="#666666" />
-        </RelativeLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Intelligent Adaptive AI System"
+                android:textColor="#666666"
+                android:textSize="12sp" />
+        </LinearLayout>
 
-        <TextView
+        <LinearLayout
+            android:id="@+id/insightsToggle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Intelligent Adaptive AI System"
-            android:textColor="#666666"
-            android:textSize="12sp" />
-    </LinearLayout>
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:id="@+id/insightsToggleText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="System Insights"
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:layout_marginEnd="6dp"/>
+            <ImageView
+                android:id="@+id/insightsInfoIcon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_ai_small"
+                app:tint="#666666" />
+        </LinearLayout>
+    </RelativeLayout>
 
-    <ScrollView
+    <!-- Insights Card (Toggleable) -->
+    <LinearLayout
+        android:id="@+id/insightsContainer"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:layout_below="@id/header"
-        android:layout_above="@+id/inputArea">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/card_insights"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:elevation="2dp">
 
-            <!-- User Bubble -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+            <RelativeLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:background="@drawable/bubble_user"
-                android:padding="12dp"
-                android:layout_marginBottom="16dp">
+                android:background="#E3F2FD"
+                android:padding="10dp">
+                <ImageView
+                    android:id="@+id/modeInfoIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_ai_small"
+                    app:tint="@color/accent_blue" />
+                <TextView
+                    android:id="@+id/insightModeText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toEndOf="@id/modeInfoIcon"
+                    android:layout_marginStart="8dp"
+                    android:layout_centerVertical="true"
+                    android:text="LOCAL_LIGHTWEIGHT"
+                    android:textColor="@color/accent_blue"
+                    android:textStyle="bold"
+                    android:textSize="13sp" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Explain edge AI simply"
-                    android:textColor="#444444"
-                    android:textSize="14sp" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
                     android:text="Now"
-                    android:textColor="#999999"
-                    android:textSize="10sp"
-                    android:layout_marginStart="8dp" />
-            </LinearLayout>
+                    android:textColor="#777777"
+                    android:textSize="11sp" />
+            </RelativeLayout>
 
-            <!-- AI Bubble -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bubble_ai"
-                android:orientation="horizontal"
-                android:padding="12dp"
-                android:layout_marginBottom="24dp">
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_ai_small"
-                    android:layout_marginEnd="10dp" />
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Edge AI means running AI directly on your device (like a smartphone) instead of relying on a cloud server. This allows faster responses and better privacy but requires careful resource management due to limitations in RAM, CPU, etc."
-                    android:textColor="#444444"
-                    android:textSize="14sp"
-                    android:lineSpacingExtra="2dp" />
-            </LinearLayout>
-
-            <!-- System Insights Header -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="System Insights"
-                    android:textColor="#333333"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=" ▼"
-                    android:textColor="#333333"
-                    android:textSize="12sp" />
-                <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_ai_small"
-                    app:tint="#CCCCCC" />
-            </LinearLayout>
-
-            <!-- Insights Card -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_insights"
                 android:orientation="vertical"
-                android:layout_marginBottom="16dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="#E1EBF4"
-                    android:padding="10dp">
-                    <ImageView
-                        android:id="@+id/modeIcon"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_ai_small"
-                        app:tint="@color/accent_blue" />
-                    <TextView
-                        android:id="@+id/insightModeText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_toEndOf="@id/modeIcon"
-                        android:layout_marginStart="8dp"
-                        android:layout_centerVertical="true"
-                        android:text="HYBRID"
-                        android:textColor="@color/accent_blue"
-                        android:textStyle="bold"
-                        android:textSize="13sp" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:text="Now"
-                        android:textColor="#777777"
-                        android:textSize="11sp" />
-                </RelativeLayout>
+                android:padding="12dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="12dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-                        <TextView
-                            android:id="@+id/ramLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="RAM Free: 1.2 GB"
-                            android:textColor="#333333"
-                            android:textSize="13sp" />
-                        <ImageView
-                            android:id="@+id/ramIndicator"
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
-                            android:layout_marginStart="6dp"
-                            android:src="@drawable/ic_check_green" />
-
-                        <View android:layout_width="20dp" android:layout_height="1dp" />
-
-                        <ImageView
-                            android:id="@+id/cpuIndicator"
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
-                            android:layout_marginEnd="6dp"
-                            android:src="@drawable/dot_green" />
-                        <TextView
-                            android:id="@+id/cpuLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="CPU Usage: 26%"
-                            android:textColor="#333333"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
                     <TextView
-                        android:id="@+id/networkLabel"
+                        android:id="@+id/ramLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Network: 🔄 STRONG (25 Mbps)"
+                        android:text="RAM Free: 648 MB"
                         android:textColor="#333333"
                         android:textSize="13sp" />
+                    <ImageView
+                        android:id="@+id/ramIndicator"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginStart="6dp"
+                        android:src="@drawable/dot_orange" />
 
+                    <View android:layout_width="20dp" android:layout_height="1dp" />
+
+                    <ImageView
+                        android:id="@+id/cpuIndicator"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginEnd="6dp"
+                        android:src="@drawable/dot_green" />
                     <TextView
-                        android:id="@+id/batteryLabel"
+                        android:id="@+id/cpuLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Battery Level: 80%"
+                        android:text="CPU Usage: 21%"
                         android:textColor="#333333"
                         android:textSize="13sp" />
                 </LinearLayout>
-            </LinearLayout>
 
-            <!-- Execution Info Card -->
+                <TextView
+                    android:id="@+id/networkLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Network: 🔄 STRONG (85 Mbps)"
+                    android:textColor="#333333"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/batteryLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Battery Level: 100%"
+                    android:textColor="#333333"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Chat Area -->
+    <ScrollView
+        android:id="@+id/chatScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/insightsContainer"
+        android:layout_above="@+id/inputArea"
+        android:clipToPadding="false"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:id="@+id/chatContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Thinking Indicator (Hidden by default) -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:id="@+id/thinkingIndicator"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_execution"
-                android:orientation="vertical"
+                android:background="@drawable/bubble_ai"
                 android:padding="12dp"
+                android:visibility="gone"
                 android:layout_marginBottom="16dp">
-
                 <TextView
-                    android:id="@+id/execInfoTitle"
+                    android:id="@+id/thinkingText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Execution Info: HYBRID"
-                    android:textColor="#455A64"
-                    android:textStyle="bold"
-                    android:textSize="13.5sp" />
-
-                <TextView
-                    android:id="@+id/strategyModel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Models Used: DeepSeek Lite (1.5B 4-bit) + Gemini API"
-                    android:textSize="12.5sp"
-                    android:textColor="#444444" />
-
-                <TextView
-                    android:id="@+id/strategyReason"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Decision Reason: Balanced mix of local + cloud: sufficient RAM and strong network detected."
-                    android:textSize="12.5sp"
-                    android:textColor="#444444" />
-
-                <TextView
-                    android:id="@+id/strategyLatency"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Latency: 1.8s"
-                    android:textSize="12.5sp"
-                    android:textColor="#444444" />
-
-                <TextView
-                    android:id="@+id/strategyNetworkUsed"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Network Used: Yes"
-                    android:textSize="12.5sp"
-                    android:textColor="#444444" />
+                    android:text="Thinking..."
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
             </LinearLayout>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Tip: This system adapts to your device's current resources for optimal AI performance."
-                android:textColor="#999999"
-                android:textSize="11sp"
-                android:gravity="center"
-                android:layout_marginBottom="40dp" />
-
         </LinearLayout>
     </ScrollView>
 
@@ -302,7 +216,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:background="@color/white"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:elevation="8dp">
 
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0" />
 
@@ -313,6 +228,7 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
             <EditText
+                android:id="@+id/messageInput"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_weight="1"
@@ -320,9 +236,11 @@
                 android:hint="Ask anything here..."
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                android:inputType="textShortMessage" />
 
             <ImageButton
+                android:id="@+id/sendButton"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:layout_marginStart="12dp"
@@ -331,13 +249,6 @@
                 android:src="@drawable/ic_send"
                 app:tint="@color/white" />
         </LinearLayout>
-
-        <View
-            android:layout_width="60dp"
-            android:layout_height="4dp"
-            android:background="#E0E0E0"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="8dp" />
     </LinearLayout>
 
 </RelativeLayout>

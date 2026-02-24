@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:id="@+id/aiBubbleContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bubble_ai"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_ai_small"
+                android:layout_marginEnd="8dp" />
+            <TextView
+                android:id="@+id/messageText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#444444"
+                android:textSize="14sp"
+                android:textIsSelectable="true" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/executionInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="#F4F7F9"
+            android:orientation="vertical"
+            android:padding="8dp">
+            <TextView
+                android:id="@+id/modeTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:textColor="#455A64" />
+            <TextView
+                android:id="@+id/reasonText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="11sp"
+                android:textColor="#666666" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Quick Actions (Hidden by default) -->
+    <LinearLayout
+        android:id="@+id/aiActions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp"
+        android:visibility="gone">
+        <ImageButton
+            android:id="@+id/copyButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_copy"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="6dp"
+            android:scaleType="fitCenter"/>
+    </LinearLayout>
+</LinearLayout>

@@ -3019,6 +3019,8 @@ drawable ic_call_decline_low
 drawable ic_check_green
 drawable ic_clear_black_24
 drawable ic_clock_black_24dp
+drawable ic_copy
+drawable ic_edit
 drawable ic_keyboard_black_24dp
 drawable ic_m3_chip_check
 drawable ic_m3_chip_checked_circle
@@ -3176,6 +3178,8 @@ id action_text
 id actions
 id activity_chooser_view_content
 id add
+id aiActions
+id aiBubbleContainer
 id alertTitle
 id aligned
 id all
@@ -3217,6 +3221,8 @@ id center_vertical
 id chain
 id chain2
 id chains
+id chatContainer
+id chatScrollView
 id checkbox
 id checked
 id chronometer
@@ -3236,6 +3242,7 @@ id contentPanel
 id contiguous
 id continuousVelocity
 id coordinator
+id copyButton
 id cos
 id counterclockwise
 id cpuIndicator
@@ -3279,6 +3286,7 @@ id easeInOut
 id easeOut
 id east
 id edge
+id editButton
 id edit_query
 id edit_text_id
 id elastic
@@ -3287,7 +3295,7 @@ id end
 id endToStart
 id enterAlways
 id enterAlwaysCollapsed
-id execInfoTitle
+id executionInfo
 id exitUntilCollapsed
 id expand_activities_button
 id expanded_menu
@@ -3336,6 +3344,10 @@ id indeterminate
 id info
 id inputArea
 id insightModeText
+id insightsContainer
+id insightsInfoIcon
+id insightsToggle
+id insightsToggleText
 id invisible
 id inward
 id italic
@@ -3379,9 +3391,12 @@ id material_timepicker_view
 id material_value_index
 id matrix
 id message
+id messageInput
+id messageText
 id middle
 id mini
-id modeIcon
+id modeInfoIcon
+id modeTitle
 id month_grid
 id month_navigation_bar
 id month_navigation_fragment_toggle
@@ -3473,6 +3488,7 @@ id radio
 id ramIndicator
 id ramLabel
 id ratio
+id reasonText
 id rectangles
 id report_drawn
 id reverseSawtooth
@@ -3505,6 +3521,7 @@ id search_voice_btn
 id select_dialog_listview
 id selected
 id selection_type
+id sendButton
 id sharedValueSet
 id sharedValueUnset
 id shortcut
@@ -3539,10 +3556,6 @@ id startVertical
 id staticLayout
 id staticPostLayout
 id stop
-id strategyLatency
-id strategyModel
-id strategyNetworkUsed
-id strategyReason
 id stretch
 id submenuarrow
 id submit_area
@@ -3577,7 +3590,10 @@ id textinput_helper_text
 id textinput_placeholder
 id textinput_prefix_text
 id textinput_suffix_text
+id thinkingIndicator
+id thinkingText
 id time
+id timestamp
 id title
 id titleDividerNoCustom
 id title_template
@@ -3598,6 +3614,8 @@ id uniform
 id unlabeled
 id up
 id useLogo
+id userActions
+id userBubbleContainer
 id vertical_only
 id view_offset_helper
 id view_transition
@@ -3749,6 +3767,8 @@ layout design_text_input_end_icon
 layout design_text_input_start_icon
 layout ime_base_split_test_activity
 layout ime_secondary_split_test_activity
+layout item_chat_ai
+layout item_chat_user
 layout m3_alert_dialog
 layout m3_alert_dialog_actions
 layout m3_alert_dialog_title

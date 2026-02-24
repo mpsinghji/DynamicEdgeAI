@@ -4,7 +4,24 @@
             "outputFile": "com.dynamicedgeai.app-mergeDebugResources-31:/values-ca/values-ca.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\manpr\\.gradle\\caches\\8.13\\transforms\\e0fceb7cd8008ae05c4826a419bc9de3\\transformed\\material-1.11.0\\res\\values-ca\\values-ca.xml",
+                    "source": "C:\\Users\\manpr\\.gradle\\caches\\9.2.1\\transforms\\d5f9e40561205ddbf62bcb1a4a9a2a1d\\workspace\\transformed\\core-1.12.0\\res\\values-ca\\values-ca.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,151,253,352,449,555,660,786",
+                        "endColumns": "95,101,98,96,105,104,125,100",
+                        "endOffsets": "146,248,347,444,550,655,781,882"
+                    },
+                    "to": {
+                        "startLines": "38,39,40,41,42,43,44,109",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "3493,3589,3691,3790,3887,3993,4098,9572",
+                        "endColumns": "95,101,98,96,105,104,125,100",
+                        "endOffsets": "3584,3686,3785,3882,3988,4093,4219,9668"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\manpr\\.gradle\\caches\\9.2.1\\transforms\\e89d06e815c26bd426927db01d3160e5\\workspace\\transformed\\material-1.11.0\\res\\values-ca\\values-ca.xml",
                     "from": {
                         "startLines": "2,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -23,24 +40,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\manpr\\.gradle\\caches\\8.13\\transforms\\077df947e625d0ec6927222820de6f71\\transformed\\core-1.12.0\\res\\values-ca\\values-ca.xml",
-                    "from": {
-                        "startLines": "2,3,4,5,6,7,8,9",
-                        "startColumns": "4,4,4,4,4,4,4,4",
-                        "startOffsets": "55,151,253,352,449,555,660,786",
-                        "endColumns": "95,101,98,96,105,104,125,100",
-                        "endOffsets": "146,248,347,444,550,655,781,882"
-                    },
-                    "to": {
-                        "startLines": "38,39,40,41,42,43,44,109",
-                        "startColumns": "4,4,4,4,4,4,4,4",
-                        "startOffsets": "3493,3589,3691,3790,3887,3993,4098,9572",
-                        "endColumns": "95,101,98,96,105,104,125,100",
-                        "endOffsets": "3584,3686,3785,3882,3988,4093,4219,9668"
-                    }
-                },
-                {
-                    "source": "C:\\Users\\manpr\\.gradle\\caches\\8.13\\transforms\\0e9cddc0b8f63fc8951c72ad36bcff8c\\transformed\\appcompat-1.6.1\\res\\values-ca\\values-ca.xml",
+                    "source": "C:\\Users\\manpr\\.gradle\\caches\\9.2.1\\transforms\\2367caee1ed6017280cca7a4e1cf14f7\\workspace\\transformed\\appcompat-1.6.1\\res\\values-ca\\values-ca.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
