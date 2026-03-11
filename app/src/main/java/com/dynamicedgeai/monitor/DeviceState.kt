@@ -6,7 +6,8 @@ data class DeviceState(
     val networkQuality: NetworkQuality = NetworkQuality.UNKNOWN,
     val thermalState: ThermalState = ThermalState.NORMAL,
     val cpuUsage: Int = 0,
-    val ramAvailable: Long = 0 // in MB
+    val ramAvailable: Long = 0, // in MB
+    val totalRam: Long = 0      // in MB
 )
 
 enum class NetworkQuality { POOR, MODERATE, GOOD, EXCELLENT, UNKNOWN }

@@ -268,7 +268,8 @@ class MainActivity : AppCompatActivity() {
                     thermalState = thermal,
                     networkQuality = network,
                     cpuUsage = cpu,
-                    ramAvailable = ram
+                    ramAvailable = ram.first,
+                    totalRam = ram.second
                 )
             }.collect { state ->
                 lastKnownState = state
@@ -282,8 +283,8 @@ class MainActivity : AppCompatActivity() {
         ramLabel.text = "RAM Free: $ramFormatted"
         
         ramIndicator.setImageResource(when {
-            state.ramAvailable > 800 -> R.drawable.ic_check_green
-            state.ramAvailable > 400 -> R.drawable.dot_orange
+            state.totalRam > 0 && (state.ramAvailable.toDouble() / state.totalRam) > 0.15 -> R.drawable.ic_check_green
+            state.totalRam > 0 && (state.ramAvailable.toDouble() / state.totalRam) > 0.05 -> R.drawable.dot_orange
             else -> R.drawable.dot_red
         })
 
