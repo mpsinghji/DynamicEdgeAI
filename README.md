@@ -1,41 +1,97 @@
-# Dynamic Edge AI
+# 📱 Dynamic Edge AI
 
-**Dynamic Edge AI** is an advanced Android application designed to optimize artificial intelligence inference by intelligently adapting to real-time device resource constraints. The system continuously monitors system health—including CPU usage, RAM availability, battery levels, thermal states, and network quality—to dynamically select the most efficient execution strategy (Local, Hybrid, or Cloud).
+**Dynamic Edge AI** is an Android research application that intelligently decides where AI inference should run — **on the device (Edge)** or **in the Cloud** — based on real-time device conditions and user privacy preferences.
 
-## 🚀 Key Features
+The system continuously monitors **RAM availability, device thermal state, and network quality**, then dynamically selects the most efficient AI execution strategy. This project explores **adaptive edge computing for mobile AI systems**.
 
-- **Real-time Resource Monitoring:** High-frequency tracking of device metrics using Android System APIs and Coroutine Flows.
-- **Intelligent Decision Engine:** An adaptive logic layer that evaluates environment constraints to choose optimal AI models.
-- **Adaptive Execution Modes:**
-  - **Local Lightweight:** Minimal resource consumption for low-power or offline scenarios.
-  - **Hybrid:** Balanced performance utilizing both edge processing and cloud verification.
-  - **Cloud Heavy:** High-performance inference offloaded to powerful remote models when resources and network allow.
-- **Modern Chat Interface:** A professional, conversational UI providing transparent "System Insights" and "Execution Info" for every AI interaction.
+---
 
-## 🛠 Project Architecture
+# 🚀 Features
 
-The project is organized into several core modules:
-- **`monitor`:** Contains specialized monitors for Battery, CPU, RAM, Thermal, and Network states.
-- **`engine`:** The "Brain" of the app, containing the `DecisionEngine` and strategy definitions.
-- **`ml`:** Infrastructure for local (TFLite) and cloud-based AI inference.
-- **`ui`:** Material 3 based activities and layouts following the latest Android design patterns.
+### 🔄 Dynamic AI Execution
+The system automatically selects between **local inference** and **cloud inference** depending on device health and connectivity.
 
-## 📱 System Status Indicators
+### 🔒 Privacy Mode
+Users can enable **Privacy Mode**, which forces all AI processing to run locally so messages **never leave the device**.
 
-The app provides visual feedback on system health:
-- ✅ **Green:** Optimal (e.g., CPU < 40%, RAM > 800MB)
-- 🟠 **Orange:** Moderate Load (e.g., CPU < 80%, RAM > 400MB)
-- 🔴 **Red:** Critical/Throttled (High load or extremely low resources)
+### 🧠 Resource-Aware Decision Engine
+A rule-based decision engine evaluates live telemetry to determine the best execution strategy:
+* RAM availability (RAM ratio)
+* Device thermal state
+* Network quality
+* Cloud latency
 
-## 🛠 Setup & Installation
+### 📊 Explainable Decisions
+Each AI response includes a **reason string** explaining why a strategy was selected.
+> **Example:** > **Strategy:** CLOUD  
+> **Reason:** Device temperature high
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/mpsinghji/DynamicEdgeAI.git
-   ```
-2. Open the project in **Android Studio (Iguana or newer)**.
-3. Ensure you have the **Android SDK 34** installed.
-4. Sync Gradle and run the `:app` module on an emulator or physical device.
+### 💬 Modern Chat Interface
+A clean messaging interface built with **Material Design** provides transparency about system state and execution mode.
 
-## 📄 License
-This project is part of a research initiative for adaptive edge computing.
+---
+
+# 🏗 System Architecture
+
+The decision-making flow follows a structured pipeline:
+
+**User Message** ↓  
+**Privacy Mode Check** ↓  
+**Decision Engine** (RAM + Thermal + Network)  
+↓  
+**Strategy Selection** ↓  
+**LOCAL LLM** (TinyLlama) | **CLOUD LLM** (Gemini API)  
+↓  
+**AI Response**
+
+---
+
+# ⚙️ Execution Strategies
+
+| Feature | Local Inference | Cloud Inference |
+| :--- | :--- | :--- |
+| **Model** | TinyLlama (Quantized) | Google Gemini API |
+| **Used When** | Network unavailable, Privacy mode ON, Sufficient resources | Device overheating, Low RAM, Complex inference |
+| **Benefits** | Offline use, Privacy, No network dependency | High model capability, Faster complex tasks |
+
+---
+
+# 🧠 Decision Engine Logic
+
+The Decision Engine dynamically selects execution strategy based on device state.
+
+### Priority Order:
+1.  **Privacy Mode** (Highest)
+2.  **Thermal Safety**
+3.  **RAM Availability**
+4.  **Network Quality** (Lowest)
+
+### Example Rules:
+* `Privacy Mode ON` → **LOCAL**
+* `High temperature` → **CLOUD**
+* `RAM ratio < 30%` → **CLOUD**
+* `Network unavailable` → **LOCAL**
+* `Otherwise` → **LOCAL**
+
+### Hysteresis (Stability Logic):
+To prevent rapid switching ("flapping") between states:
+* Switch to **CLOUD** if RAM < 30%
+* Return to **LOCAL** only if RAM > 40%
+
+---
+
+# 📊 Research Motivation
+
+Mobile AI systems face a key challenge known as the **Execution Paradox**:
+* **Edge execution** → privacy + low latency
+* **Cloud execution** → stronger models
+
+**Dynamic Edge AI** explores how mobile devices can **adaptively choose the optimal execution location** based on real-time device conditions.
+
+---
+
+# 🛠 Setup & Installation
+
+### 1. Clone the Repository
+```bash
+git clone [https://github.com/mpsinghji/DynamicEdgeAI.git](https://github.com/mpsinghji/DynamicEdgeAI.git)
