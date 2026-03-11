@@ -1,0 +1,41 @@
+# Built artifacts
+bin/
+gen/
+out/
+build/
+app/build/
+.gradle/
+
+# Local configuration files
+local.properties
+.idea/workspace.xml
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/vcs.xml
+
+# Keystore files
+*.jks
+*.keystore
+
+# External native build folder
+.externalNativeBuild/
+.cxx/
+
+# Log files
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Android Studio / IntelliJ specific
+*.iml
+.navigation/
+captures/
+
+# API keys / secrets (SAFEGUARDED)
+secrets.xml
+gradle.properties
