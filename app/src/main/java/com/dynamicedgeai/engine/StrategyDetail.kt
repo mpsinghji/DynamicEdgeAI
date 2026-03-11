@@ -1,9 +1,10 @@
 package com.dynamicedgeai.engine
 
+/**
+ * Data class to hold the selected strategy and the reason for the decision.
+ * This is used for explainable AI output in the UI.
+ */
 data class StrategyDetail(
-    val mode: ExecutionStrategy,
-    val modelName: String,
-    val reason: String,
-    val latency: String,
-    val networkUsed: String
+    val strategy: Strategy,
+    val reason: String
 )

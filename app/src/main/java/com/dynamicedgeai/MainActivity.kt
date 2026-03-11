@@ -21,13 +21,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.dynamicedgeai.cloud.CloudModelRunner
 import com.dynamicedgeai.engine.DecisionEngine
-import com.dynamicedgeai.engine.ExecutionStrategy
-import com.dynamicedgeai.ml.CloudAIEngine
-import com.dynamicedgeai.ml.LocalAIEngine
+import com.dynamicedgeai.engine.Strategy
+import com.dynamicedgeai.local.LocalModelRunner
 import com.dynamicedgeai.monitor.*
-import com.google.gson.Gson
-import kotlinx.coroutines.delay
+import com.dynamicedgeai.router.MessageRouter
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -36,20 +35,16 @@ import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
-    private fun getApiKey(): String {
-        return getString(R.string.gemini_api_key)
-    }
-
     private lateinit var batteryMonitor: BatteryMonitor
     private lateinit var thermalMonitor: ThermalMonitor
     private lateinit var networkMonitor: NetworkMonitor
     private lateinit var cpuMonitor: CpuMonitor
     private lateinit var ramMonitor: RamMonitor
-    private val decisionEngine = DecisionEngine()
     
-    private val cloudAIEngine = CloudAIEngine()
-    private val localAIEngine = LocalAIEngine()
-    private val gson = Gson()
+    private val decisionEngine = DecisionEngine()
+    private val localModelRunner = LocalModelRunner()
+    private val cloudModelRunner = CloudModelRunner()
+    private lateinit var messageRouter: MessageRouter
 
     private lateinit var ramLabel: TextView
     private lateinit var cpuLabel: TextView
@@ -62,8 +57,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var insightsToggle: View
     private lateinit var insightsContainer: View
     private lateinit var insightsChevron: ImageView
-    private var isInsightsVisible = true
+    private var isInsightsVisible = false
 
+    private lateinit var privacyModeToggle: android.widget.Switch
     private lateinit var messageInput: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var chatContainer: LinearLayout
@@ -76,6 +72,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        messageRouter = MessageRouter(decisionEngine, localModelRunner, cloudModelRunner)
 
         // Initialize UI components
         ramLabel = findViewById(R.id.ramLabel)
@@ -90,6 +88,7 @@ class MainActivity : AppCompatActivity() {
         insightsContainer = findViewById(R.id.insightsContainer)
         insightsChevron = findViewById(R.id.insightsInfoIcon) 
 
+        privacyModeToggle = findViewById(R.id.privacyModeToggle)
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
         chatContainer = findViewById(R.id.chatContainer)
@@ -148,23 +147,19 @@ class MainActivity : AppCompatActivity() {
             showThinking()
             
             val state = lastKnownState ?: DeviceState()
-            val detail = decisionEngine.determineStrategyDetail(state)
             
-            val aiResponse = when(detail.mode) {
-                ExecutionStrategy.CLOUD_HEAVY, ExecutionStrategy.HYBRID -> {
-                    cloudAIEngine.runCloudModel(getApiKey(), text)
-                }
-                ExecutionStrategy.LOCAL_LIGHTWEIGHT -> {
-                    delay(1500)
-                    "I am responding using my on-device lightweight model to save your battery and data."
-                }
-            }
+            // Route message using the new MessageRouter
+            val result = messageRouter.routeMessage(
+                text = text,
+                isPrivacyModeOn = privacyModeToggle.isChecked,
+                state = state
+            )
             
             val endTime = System.currentTimeMillis()
-            val finalLatency = "${(endTime - startTime) / 1000.0}s"
+            val latency = "${(endTime - startTime) / 1000.0}s"
             
             hideThinking()
-            addAIResponse(aiResponse, detail.copy(latency = finalLatency))
+            addAIResponse(result.response, result.detail, latency)
             scrollToBottom()
         }
     }
@@ -201,14 +196,21 @@ class MainActivity : AppCompatActivity() {
         chatContainer.addView(view)
     }
 
-    private fun addAIResponse(response: String, detail: com.dynamicedgeai.engine.StrategyDetail) {
+    private fun addAIResponse(response: String, detail: com.dynamicedgeai.engine.StrategyDetail, latency: String) {
         val view = LayoutInflater.from(this).inflate(R.layout.item_chat_ai, chatContainer, false)
         view.findViewById<TextView>(R.id.messageText).text = response
-        view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${detail.mode.name}"
-        view.findViewById<TextView>(R.id.modelUsedText).text = "Model Used: ${detail.modelName}"
+        
+        view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${detail.strategy.name}"
+        
+        // Dynamic Model Name based on strategy
+        val modelName = if (detail.strategy == Strategy.LOCAL) "TinyLlama Q4 (On-Device)" else "Gemini 1.5 Flash (Cloud)"
+        view.findViewById<TextView>(R.id.modelUsedText).text = "Model: $modelName"
+        
         view.findViewById<TextView>(R.id.reasonText).text = "Reason: ${detail.reason}"
-        view.findViewById<TextView>(R.id.latencyText).text = "Latency: ${detail.latency}"
-        view.findViewById<TextView>(R.id.networkUsedText).text = "Network Used: ${detail.networkUsed}"
+        view.findViewById<TextView>(R.id.latencyText).text = "Latency: $latency"
+        
+        val networkUsed = if (detail.strategy == Strategy.CLOUD) "Yes" else "No"
+        view.findViewById<TextView>(R.id.networkUsedText).text = "Network Used: $networkUsed"
 
         val bubbleContainer = view.findViewById<View>(R.id.aiBubbleContainer)
         val actionsLayout = view.findViewById<View>(R.id.aiActions)
@@ -282,9 +284,11 @@ class MainActivity : AppCompatActivity() {
         val ramFormatted = if (state.ramAvailable > 1024) String.format(Locale.US, "%.1f GB", state.ramAvailable / 1024f) else "${state.ramAvailable} MB"
         ramLabel.text = "RAM Free: $ramFormatted"
         
+        val ramRatio = if (state.totalRam > 0) state.ramAvailable.toDouble() / state.totalRam else 1.0
+        
         ramIndicator.setImageResource(when {
-            state.totalRam > 0 && (state.ramAvailable.toDouble() / state.totalRam) > 0.15 -> R.drawable.ic_check_green
-            state.totalRam > 0 && (state.ramAvailable.toDouble() / state.totalRam) > 0.05 -> R.drawable.dot_orange
+            ramRatio > 0.22 -> R.drawable.ic_check_green
+            ramRatio > 0.15 -> R.drawable.dot_orange
             else -> R.drawable.dot_red
         })
 
@@ -306,12 +310,17 @@ class MainActivity : AppCompatActivity() {
         networkLabel.text = "Network: $networkIcon $networkStr"
         batteryLabel.text = "Battery Level: ${state.batteryLevel.toInt()}%"
 
-        val detail = decisionEngine.determineStrategyDetail(state)
-        insightModeText.text = detail.mode.name
-        val modeColor = when(detail.mode) {
-            ExecutionStrategy.LOCAL_LIGHTWEIGHT -> R.color.mode_local
-            ExecutionStrategy.HYBRID -> R.color.accent_blue
-            ExecutionStrategy.CLOUD_HEAVY -> R.color.mode_cloud
+        // Decide current strategy based on state (for UI preview only)
+        val detail = decisionEngine.determineStrategy(state)
+        
+        // If Privacy mode is ON, UI should show forced LOCAL
+        val displayStrategy = if (privacyModeToggle.isChecked) Strategy.LOCAL else detail.strategy
+        val displayReason = if (privacyModeToggle.isChecked) "Privacy Mode ON" else detail.reason
+        
+        insightModeText.text = displayStrategy.name
+        val modeColor = when(displayStrategy) {
+            Strategy.LOCAL -> R.color.mode_local
+            Strategy.CLOUD -> R.color.accent_blue
         }
         insightModeText.setTextColor(ContextCompat.getColor(this, modeColor))
     }

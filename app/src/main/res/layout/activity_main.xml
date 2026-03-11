@@ -47,30 +47,52 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/insightsToggle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackground">
+            android:gravity="center_vertical">
+
             <TextView
-                android:id="@+id/insightsToggleText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="System Insights"
-                android:textSize="12sp"
+                android:text="Privacy"
+                android:textSize="10sp"
                 android:textColor="#666666"
-                android:layout_marginEnd="6dp"/>
-            <ImageView
-                android:id="@+id/insightsInfoIcon"
-                android:layout_width="18dp"
-                android:layout_height="18dp"
-                android:src="@drawable/ic_ai_small"
-                app:tint="#666666" />
+                android:layout_marginEnd="4dp"/>
+
+            <Switch
+                android:id="@+id/privacyModeToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:checked="false" />
+
+            <LinearLayout
+                android:id="@+id/insightsToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground">
+                <TextView
+                    android:id="@+id/insightsToggleText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Insights"
+                    android:textSize="12sp"
+                    android:textColor="#666666"
+                    android:layout_marginEnd="6dp"/>
+                <ImageView
+                    android:id="@+id/insightsInfoIcon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_ai_small"
+                    app:tint="#666666" />
+            </LinearLayout>
         </LinearLayout>
     </RelativeLayout>
 
@@ -82,7 +104,7 @@
         android:layout_below="@id/header"
         android:orientation="vertical"
         android:padding="16dp"
-        android:visibility="visible">
+        android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -107,7 +129,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="28dp"
                     android:layout_centerVertical="true"
-                    android:text="LOCAL_LIGHTWEIGHT"
+                    android:text="LOCAL"
                     android:textColor="@color/accent_blue"
                     android:textStyle="bold"
                     android:textSize="13sp" />
@@ -116,7 +138,7 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:text="Now"
+                    android:text="Live"
                     android:textColor="#777777"
                     android:textSize="11sp" />
             </RelativeLayout>
@@ -136,7 +158,7 @@
                         android:id="@+id/ramLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="RAM Free: 648 MB"
+                        android:text="RAM Free: Calculating..."
                         android:textColor="#333333"
                         android:textSize="13sp" />
                     <ImageView
@@ -158,7 +180,7 @@
                         android:id="@+id/cpuLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="CPU Usage: 21%"
+                        android:text="CPU Usage: Calculating..."
                         android:textColor="#333333"
                         android:textSize="13sp" />
                 </LinearLayout>
@@ -168,7 +190,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Network: 🔄 STRONG (85 Mbps)"
+                    android:text="Network: Calculating..."
                     android:textColor="#333333"
                     android:textSize="13sp" />
 
@@ -177,7 +199,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Battery Level: 100%"
+                    android:text="Battery Level: Calculating..."
                     android:textColor="#333333"
                     android:textSize="13sp" />
             </LinearLayout>
@@ -200,7 +222,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Thinking Indicator -->
             <LinearLayout
                 android:id="@+id/thinkingIndicator"
                 android:layout_width="wrap_content"

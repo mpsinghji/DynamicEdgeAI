@@ -11,7 +11,7 @@
         android:label="Dynamic Edge AI"
         android:roundIcon="@drawable/ic_app_logo"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        android:theme="@style/Theme.DynamicEdgeAI">
         <activity
             android:name="com.dynamicedgeai.MainActivity"
             android:exported="true">
