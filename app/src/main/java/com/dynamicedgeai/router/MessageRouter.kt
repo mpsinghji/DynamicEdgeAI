@@ -8,10 +8,6 @@ import com.dynamicedgeai.engine.StrategyDetail
 import com.dynamicedgeai.local.LocalModelRunner
 import com.dynamicedgeai.monitor.DeviceState
 
-/**
- * Routes user messages to either local or cloud models based on 
- * privacy settings and device state.
- */
 class MessageRouter(
     private val decisionEngine: DecisionEngine,
     private val localModelRunner: LocalModelRunner,
@@ -30,7 +26,7 @@ class MessageRouter(
             decisionEngine.determineStrategy(state)
         }
 
-        Log.d("MessageRouter", "Selected strategy: ${strategyDetail.strategy} Reason: ${strategyDetail.reason}")
+        Log.d("MessageRouter", "Routing with strategy: ${strategyDetail.strategy}")
 
         val response = when (strategyDetail.strategy) {
             Strategy.LOCAL -> localModelRunner.runInference(text)

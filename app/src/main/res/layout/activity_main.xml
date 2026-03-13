@@ -222,6 +222,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <!-- New Messages will be inserted BEFORE this indicator -->
             <LinearLayout
                 android:id="@+id/thinkingIndicator"
                 android:layout_width="wrap_content"
@@ -279,7 +280,9 @@
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:textSize="14sp"
-                android:inputType="textShortMessage" />
+                android:textColor="#222222"
+                android:textColorHint="#777777"
+                android:inputType="textLongMessage" />
 
             <ImageButton
                 android:id="@+id/sendButton"

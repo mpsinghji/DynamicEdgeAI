@@ -26,6 +26,7 @@ import com.dynamicedgeai.cloud.CloudModelRunner
 import com.dynamicedgeai.engine.DecisionEngine
 import com.dynamicedgeai.engine.Strategy
 import com.dynamicedgeai.local.LocalModelRunner
+import com.dynamicedgeai.local.LocalModel
 import com.dynamicedgeai.monitor.*
 import com.dynamicedgeai.router.MessageRouter
 import kotlinx.coroutines.flow.combine
@@ -43,7 +44,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ramMonitor: RamMonitor
     
     private val decisionEngine = DecisionEngine()
-    private val localModelRunner = LocalModelRunner()
+    private lateinit var localModelRunner: LocalModelRunner
     private val cloudModelRunner = CloudModelRunner()
     private lateinit var messageRouter: MessageRouter
 
@@ -75,6 +76,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        localModelRunner = LocalModelRunner(this)
         messageRouter = MessageRouter(decisionEngine, localModelRunner, cloudModelRunner)
 
         // Initialize UI components
@@ -126,21 +128,44 @@ class MainActivity : AppCompatActivity() {
 
     private fun showRamMenu(view: View) {
         val popup = PopupMenu(this, view)
-        popup.menu.add("RAM Eater (Consume 200MB)")
-        popup.menu.add("Free RAM")
         
+        // Resource Simulation Section
+        popup.menu.add(0, 101, 0, "--- RESOURCE TOOLS ---")
+        popup.menu.add(0, 1, 1, "RAM Eater (Consume 200MB)")
+        popup.menu.add(0, 2, 2, "Free RAM")
+        
+        // Local Model Selection Section
+        popup.menu.add(0, 102, 3, "--- LOCAL MODEL SELECTION ---")
+        
+        LocalModel.values().forEach { model ->
+            val status = if (localModelRunner.isModelAvailable(model)) "Ready" else "Missing"
+            val selected = if (localModelRunner.currentModel == model) " ✓" else ""
+            popup.menu.add(0, model.ordinal + 10, 4, "${model.displayName} ($status)$selected")
+        }
+
         popup.setOnMenuItemClickListener { item ->
-            when (item.title) {
-                "RAM Eater (Consume 200MB)" -> {
+            when (item.itemId) {
+                1 -> {
                     ramMonitor.eatRam(200)
                     Toast.makeText(this, "Consuming 200MB RAM...", Toast.LENGTH_SHORT).show()
+                    true
                 }
-                "Free RAM" -> {
+                2 -> {
                     ramMonitor.freeRam()
                     Toast.makeText(this, "Cleaning up RAM...", Toast.LENGTH_SHORT).show()
+                    true
                 }
+                in 10..20 -> {
+                    val selectedModel = LocalModel.values()[item.itemId - 10]
+                    if (localModelRunner.switchModel(selectedModel)) {
+                        Toast.makeText(this, "Switched to ${selectedModel.displayName}", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "${selectedModel.displayName} file missing!", Toast.LENGTH_SHORT).show()
+                    }
+                    true
+                }
+                else -> false
             }
-            true
         }
         popup.show()
     }
@@ -219,7 +244,10 @@ class MainActivity : AppCompatActivity() {
 
         val animation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
         view.startAnimation(animation)
-        chatContainer.addView(view)
+        
+        // Add before thinking indicator
+        val index = chatContainer.indexOfChild(thinkingIndicator)
+        chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
     }
 
     private fun addAIResponse(response: String, detail: com.dynamicedgeai.engine.StrategyDetail, latency: String) {
@@ -228,8 +256,12 @@ class MainActivity : AppCompatActivity() {
         
         view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${detail.strategy.name}"
         
-        // Dynamic Model Name based on strategy
-        val modelName = if (detail.strategy == Strategy.LOCAL) "TinyLlama Q4 (On-Device)" else "Gemini 1.5 Flash (Cloud)"
+        // Use the current model name from localModelRunner
+        val modelName = if (detail.strategy == Strategy.LOCAL) {
+            "${localModelRunner.currentModel.displayName} (On-Device)"
+        } else {
+            "Gemini 1.5 Flash (Cloud)"
+        }
         view.findViewById<TextView>(R.id.modelUsedText).text = "Model: $modelName"
         
         view.findViewById<TextView>(R.id.reasonText).text = "Reason: ${detail.reason}"
@@ -253,7 +285,10 @@ class MainActivity : AppCompatActivity() {
         
         val animation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
         view.startAnimation(animation)
-        chatContainer.addView(view)
+        
+        // Add before thinking indicator
+        val index = chatContainer.indexOfChild(thinkingIndicator)
+        chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
     }
 
     private fun copyToClipboard(text: String) {
@@ -270,6 +305,7 @@ class MainActivity : AppCompatActivity() {
         anim.repeatMode = Animation.REVERSE
         anim.repeatCount = Animation.INFINITE
         thinkingText.startAnimation(anim)
+        scrollToBottom()
     }
 
     private fun hideThinking() {

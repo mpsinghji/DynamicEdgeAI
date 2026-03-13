@@ -4,78 +4,68 @@ import com.dynamicedgeai.monitor.DeviceState
 import com.dynamicedgeai.monitor.NetworkQuality
 import com.dynamicedgeai.monitor.ThermalState
 
-/**
- * Decision Engine responsible for selecting the AI execution strategy
- * based on real-time device resource metrics and state.
- */
 class DecisionEngine {
 
-    // --- TEST OVERRIDE AREA ---
     private val TEST_OVERRIDE = "OFF"
-    // --------------------------
-
     private var lastStrategy: Strategy = Strategy.LOCAL
 
     /**
-     * Determines the execution strategy based on device conditions.
-     * Implements hysteresis for RAM thresholds to prevent decision flickering.
+     * Determines the execution strategy.
+     * Uses Absolute Thresholds for better compatibility with high-RAM devices.
      */
     fun determineStrategy(state: DeviceState): StrategyDetail {
 
-        // 0. Test Override (Highest Priority for debugging)
         if (TEST_OVERRIDE != "OFF") {
             val forcedStrategy = if (TEST_OVERRIDE == "CLOUD") Strategy.CLOUD else Strategy.LOCAL
             return StrategyDetail(forcedStrategy, "FORCED TEST MODE: $TEST_OVERRIDE")
         }
 
-        val ramRatio = if (state.totalRam > 0) state.ramAvailable.toDouble() / state.totalRam else 1.0
         val isNetworkUsable = state.networkQuality != NetworkQuality.POOR &&
                 state.networkQuality != NetworkQuality.UNKNOWN
 
-        // 1. Thermal Safety (High Priority)
+        // 1. Thermal Safety
         if (state.thermalState == ThermalState.SEVERE ||
             state.thermalState == ThermalState.CRITICAL ||
             state.thermalState == ThermalState.EMERGENCY) {
 
             return if (isNetworkUsable) {
                 lastStrategy = Strategy.CLOUD
-                StrategyDetail(Strategy.CLOUD, "Device temperature high (Offloading to Cloud)")
+                StrategyDetail(Strategy.CLOUD, "Thermal High: Offloading to Cloud")
             } else {
                 lastStrategy = Strategy.LOCAL
-                StrategyDetail(Strategy.LOCAL, "Thermal high but network unavailable (Forced Local)")
+                StrategyDetail(Strategy.LOCAL, "Thermal High but Network Weak: Forced Local")
             }
         }
 
-        // 2. RAM Availability with Hysteresis (Optimized for 2GB Device)
-        // Trigger CLOUD if RAM < 25% (Approx 512MB)
-        // Recover to LOCAL if RAM > 32% (Approx 655MB)
+        // 2. RAM Availability (Absolute Thresholds)
+        // Switch to Cloud if Free RAM < 600MB
+        // Recover to Local if Free RAM > 900MB
+        val freeRam = state.ramAvailable
+        
         if (lastStrategy == Strategy.LOCAL) {
-            if (ramRatio < 0.25) {
+            if (freeRam < 600) {
                 if (isNetworkUsable) {
                     lastStrategy = Strategy.CLOUD
-                    return StrategyDetail(Strategy.CLOUD, "RAM low (${(ramRatio * 100).toInt()}%). Offloading to Cloud.")
+                    return StrategyDetail(Strategy.CLOUD, "RAM Low ($freeRam MB): Offloading to Cloud")
                 }
             }
         } else {
-            // Stay in CLOUD until RAM recovers to > 32%
-            if (ramRatio < 0.32) {
+            if (freeRam < 900) {
                 return if (isNetworkUsable) {
-                    StrategyDetail(Strategy.CLOUD, "Memory recovering (Current: ${(ramRatio * 100).toInt()}%)")
+                    StrategyDetail(Strategy.CLOUD, "Memory Recovering ($freeRam MB)")
                 } else {
                     lastStrategy = Strategy.LOCAL
-                    StrategyDetail(Strategy.LOCAL, "Memory low but network lost (Forced Local)")
+                    StrategyDetail(Strategy.LOCAL, "Memory Low but Network Weak: Forced Local")
                 }
             }
         }
 
-        // 3. Network condition check (Safety catch)
         if (!isNetworkUsable) {
             lastStrategy = Strategy.LOCAL
-            return StrategyDetail(Strategy.LOCAL, "Network unavailable or too slow for cloud")
+            return StrategyDetail(Strategy.LOCAL, "Network Unavailable: Forced Local")
         }
 
-        // 4. Default Preference
         lastStrategy = Strategy.LOCAL
-        return StrategyDetail(Strategy.LOCAL, "Optimal conditions for on-device execution")
+        return StrategyDetail(Strategy.LOCAL, "Optimal resources ($freeRam MB): On-Device")
     }
 }
