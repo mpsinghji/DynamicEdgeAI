@@ -259,6 +259,16 @@
             android:padding="12dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
+
+            <ImageButton
+                android:id="@+id/menuButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/input_bg"
+                android:src="@drawable/ic_menu"
+                app:tint="#666666" />
+
             <EditText
                 android:id="@+id/messageInput"
                 android:layout_width="0dp"

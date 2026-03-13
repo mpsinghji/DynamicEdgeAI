@@ -28,7 +28,6 @@ class DecisionEngine {
             return StrategyDetail(forcedStrategy, "FORCED TEST MODE: $TEST_OVERRIDE")
         }
 
-        // Calculation: 523MB / 2048MB = ~0.25 (25%)
         val ramRatio = if (state.totalRam > 0) state.ramAvailable.toDouble() / state.totalRam else 1.0
         val isNetworkUsable = state.networkQuality != NetworkQuality.POOR &&
                 state.networkQuality != NetworkQuality.UNKNOWN
@@ -47,19 +46,19 @@ class DecisionEngine {
             }
         }
 
-        // 2. RAM Availability with Hysteresis (Fixed for 2GB Device)
-        // We trigger CLOUD if RAM < 30% (Approx 614MB).
-        // Your current 523MB (25%) will now trigger CLOUD.
+        // 2. RAM Availability with Hysteresis (Optimized for 2GB Device)
+        // Trigger CLOUD if RAM < 25% (Approx 512MB)
+        // Recover to LOCAL if RAM > 32% (Approx 655MB)
         if (lastStrategy == Strategy.LOCAL) {
-            if (ramRatio < 0.30) {
+            if (ramRatio < 0.25) {
                 if (isNetworkUsable) {
                     lastStrategy = Strategy.CLOUD
                     return StrategyDetail(Strategy.CLOUD, "RAM low (${(ramRatio * 100).toInt()}%). Offloading to Cloud.")
                 }
             }
         } else {
-            // Stay in CLOUD until RAM recovers to > 40% (Approx 820MB)
-            if (ramRatio < 0.40) {
+            // Stay in CLOUD until RAM recovers to > 32%
+            if (ramRatio < 0.32) {
                 return if (isNetworkUsable) {
                     StrategyDetail(Strategy.CLOUD, "Memory recovering (Current: ${(ramRatio * 100).toInt()}%)")
                 } else {

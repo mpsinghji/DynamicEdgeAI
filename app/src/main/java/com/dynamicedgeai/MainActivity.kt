@@ -15,6 +15,7 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -62,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var privacyModeToggle: android.widget.Switch
     private lateinit var messageInput: EditText
     private lateinit var sendButton: ImageButton
+    private lateinit var menuButton: ImageButton
     private lateinit var chatContainer: LinearLayout
     private lateinit var chatScrollView: ScrollView
     private lateinit var thinkingIndicator: LinearLayout
@@ -91,6 +93,7 @@ class MainActivity : AppCompatActivity() {
         privacyModeToggle = findViewById(R.id.privacyModeToggle)
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
+        menuButton = findViewById(R.id.menuButton)
         chatContainer = findViewById(R.id.chatContainer)
         chatScrollView = findViewById(R.id.chatScrollView)
         thinkingIndicator = findViewById(R.id.thinkingIndicator)
@@ -99,6 +102,8 @@ class MainActivity : AppCompatActivity() {
         insightsToggle.setOnClickListener { toggleInsights() }
 
         sendButton.setOnClickListener { trySendMessage() }
+        
+        menuButton.setOnClickListener { showRamMenu(it) }
 
         messageInput.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_SEND || 
@@ -117,6 +122,27 @@ class MainActivity : AppCompatActivity() {
         ramMonitor = RamMonitor(this)
 
         startResourceMonitoring()
+    }
+
+    private fun showRamMenu(view: View) {
+        val popup = PopupMenu(this, view)
+        popup.menu.add("RAM Eater (Consume 200MB)")
+        popup.menu.add("Free RAM")
+        
+        popup.setOnMenuItemClickListener { item ->
+            when (item.title) {
+                "RAM Eater (Consume 200MB)" -> {
+                    ramMonitor.eatRam(200)
+                    Toast.makeText(this, "Consuming 200MB RAM...", Toast.LENGTH_SHORT).show()
+                }
+                "Free RAM" -> {
+                    ramMonitor.freeRam()
+                    Toast.makeText(this, "Cleaning up RAM...", Toast.LENGTH_SHORT).show()
+                }
+            }
+            true
+        }
+        popup.show()
     }
 
     private fun trySendMessage() {
@@ -287,8 +313,8 @@ class MainActivity : AppCompatActivity() {
         val ramRatio = if (state.totalRam > 0) state.ramAvailable.toDouble() / state.totalRam else 1.0
         
         ramIndicator.setImageResource(when {
-            ramRatio > 0.22 -> R.drawable.ic_check_green
-            ramRatio > 0.15 -> R.drawable.dot_orange
+            ramRatio > 0.30 -> R.drawable.ic_check_green
+            ramRatio > 0.20 -> R.drawable.dot_orange
             else -> R.drawable.dot_red
         })
 
