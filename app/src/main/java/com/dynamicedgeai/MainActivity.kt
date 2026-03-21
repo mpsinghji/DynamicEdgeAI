@@ -4,6 +4,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.InputType
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -11,15 +14,10 @@ import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.EditorInfo
-import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.PopupMenu
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.dynamicedgeai.cloud.CloudModelRunner
@@ -29,8 +27,10 @@ import com.dynamicedgeai.local.LocalModelRunner
 import com.dynamicedgeai.local.LocalModel
 import com.dynamicedgeai.monitor.*
 import com.dynamicedgeai.router.MessageRouter
+import com.dynamicedgeai.util.ParallelDownloader
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var localModelRunner: LocalModelRunner
     private val cloudModelRunner = CloudModelRunner()
     private lateinit var messageRouter: MessageRouter
+    private val downloader = ParallelDownloader()
 
     private lateinit var ramLabel: TextView
     private lateinit var cpuLabel: TextView
@@ -59,7 +60,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var insightsToggle: View
     private lateinit var insightsContainer: View
     private lateinit var insightsChevron: ImageView
-    private var isInsightsVisible = false
+    private var isInsightsVisible = true
 
     private lateinit var privacyModeToggle: android.widget.Switch
     private lateinit var messageInput: EditText
@@ -70,7 +71,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var thinkingIndicator: LinearLayout
     private lateinit var thinkingText: TextView
     
+    // Download UI
+    private lateinit var downloadOverlay: CardView
+    private lateinit var downloadTitleText: TextView
+    private lateinit var downloadStatusText: TextView
+    private lateinit var downloadProgressBar: ProgressBar
+    private lateinit var downloadPercentText: TextView
+    private lateinit var btnCancelDownload: ImageButton
+    private lateinit var btnRetryDownload: ImageButton
+    
     private var lastKnownState: DeviceState? = null
+    private var currentDownloadingModel: LocalModel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         localModelRunner = LocalModelRunner(this)
         messageRouter = MessageRouter(decisionEngine, localModelRunner, cloudModelRunner)
 
-        // Initialize UI components
+        // Initialize UI
         ramLabel = findViewById(R.id.ramLabel)
         cpuLabel = findViewById(R.id.cpuLabel)
         networkLabel = findViewById(R.id.networkLabel)
@@ -87,11 +98,9 @@ class MainActivity : AppCompatActivity() {
         ramIndicator = findViewById(R.id.ramIndicator)
         cpuIndicator = findViewById(R.id.cpuIndicator)
         insightModeText = findViewById(R.id.insightModeText)
-
         insightsToggle = findViewById(R.id.insightsToggle)
         insightsContainer = findViewById(R.id.insightsContainer)
         insightsChevron = findViewById(R.id.insightsInfoIcon) 
-
         privacyModeToggle = findViewById(R.id.privacyModeToggle)
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
@@ -100,21 +109,41 @@ class MainActivity : AppCompatActivity() {
         chatScrollView = findViewById(R.id.chatScrollView)
         thinkingIndicator = findViewById(R.id.thinkingIndicator)
         thinkingText = findViewById(R.id.thinkingText)
+        
+        downloadOverlay = findViewById(R.id.downloadOverlay)
+        downloadTitleText = findViewById(R.id.downloadTitleText)
+        downloadStatusText = findViewById(R.id.downloadStatusText)
+        downloadProgressBar = findViewById(R.id.downloadProgressBar)
+        downloadPercentText = findViewById(R.id.downloadPercentText)
+        btnCancelDownload = findViewById(R.id.btnCancelDownload)
+        btnRetryDownload = findViewById(R.id.btnRetryDownload)
+
+        // Default: Show Insights
+        insightsContainer.visibility = View.VISIBLE
+        insightsChevron.rotation = 0f
 
         insightsToggle.setOnClickListener { toggleInsights() }
-
         sendButton.setOnClickListener { trySendMessage() }
-        
         menuButton.setOnClickListener { showRamMenu(it) }
+        
+        btnCancelDownload.setOnClickListener { 
+            downloader.cancel()
+            val file = currentDownloadingModel?.let { localModelRunner.getModelPath(it) }
+            if (file?.exists() == true) file.delete() 
+            downloadOverlay.visibility = View.GONE
+            Toast.makeText(this, "Download Reset", Toast.LENGTH_SHORT).show()
+        }
+
+        btnRetryDownload.setOnClickListener {
+            currentDownloadingModel?.let { startParallelDownload(it) }
+        }
 
         messageInput.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_SEND || 
                 (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
                 trySendMessage()
                 true
-            } else {
-                false
-            }
+            } else { false }
         }
 
         batteryMonitor = BatteryMonitor(this)
@@ -126,41 +155,58 @@ class MainActivity : AppCompatActivity() {
         startResourceMonitoring()
     }
 
+    private fun toggleInsights() {
+        isInsightsVisible = !isInsightsVisible
+        insightsContainer.visibility = if (isInsightsVisible) View.VISIBLE else View.GONE
+        insightsChevron.animate().rotation(if (isInsightsVisible) 0f else 180f).setDuration(300).start()
+    }
+
+    private fun trySendMessage() {
+        val text = messageInput.text.toString()
+        if (text.isNotBlank()) {
+            messageInput.text.clear()
+            handleUserMessage(text)
+        }
+    }
+
+    private fun handleUserMessage(text: String) {
+        addUserBubble(text)
+        scrollToBottom()
+        lifecycleScope.launch {
+            val startTime = System.currentTimeMillis()
+            showThinking()
+            val state = lastKnownState ?: DeviceState()
+            val result = messageRouter.routeMessage(text, privacyModeToggle.isChecked, state)
+            val latency = "${(System.currentTimeMillis() - startTime) / 1000.0}s"
+            hideThinking()
+            addAIResponse(result.response, result.detail, latency)
+            scrollToBottom()
+        }
+    }
+
     private fun showRamMenu(view: View) {
         val popup = PopupMenu(this, view)
-        
-        // Resource Simulation Section
         popup.menu.add(0, 101, 0, "--- RESOURCE TOOLS ---")
-        popup.menu.add(0, 1, 1, "RAM Eater (Consume 200MB)")
-        popup.menu.add(0, 2, 2, "Free RAM")
-        
-        // Local Model Selection Section
-        popup.menu.add(0, 102, 3, "--- LOCAL MODEL SELECTION ---")
+        popup.menu.add(0, 1, 1, "Adjust RAM Level (Target)")
+        popup.menu.add(0, 102, 2, "--- LOCAL MODELS ---")
         
         LocalModel.values().forEach { model ->
-            val status = if (localModelRunner.isModelAvailable(model)) "Ready" else "Missing"
+            val isReady = localModelRunner.isModelAvailable(model)
+            val status = if (isReady) "Ready" else "Download"
             val selected = if (localModelRunner.currentModel == model) " ✓" else ""
-            popup.menu.add(0, model.ordinal + 10, 4, "${model.displayName} ($status)$selected")
+            popup.menu.add(0, model.ordinal + 10, 3, "${model.displayName} ($status)$selected")
         }
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                1 -> {
-                    ramMonitor.eatRam(200)
-                    Toast.makeText(this, "Consuming 200MB RAM...", Toast.LENGTH_SHORT).show()
-                    true
-                }
-                2 -> {
-                    ramMonitor.freeRam()
-                    Toast.makeText(this, "Cleaning up RAM...", Toast.LENGTH_SHORT).show()
-                    true
-                }
+                1 -> { showCustomRamDialog(); true }
                 in 10..20 -> {
                     val selectedModel = LocalModel.values()[item.itemId - 10]
-                    if (localModelRunner.switchModel(selectedModel)) {
+                    if (localModelRunner.isModelAvailable(selectedModel)) {
+                        localModelRunner.switchModel(selectedModel)
                         Toast.makeText(this, "Switched to ${selectedModel.displayName}", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this, "${selectedModel.displayName} file missing!", Toast.LENGTH_SHORT).show()
+                        startParallelDownload(selectedModel)
                     }
                     true
                 }
@@ -170,82 +216,79 @@ class MainActivity : AppCompatActivity() {
         popup.show()
     }
 
-    private fun trySendMessage() {
-        val text = messageInput.text.toString()
-        if (text.isNotBlank()) {
-            handleUserMessage(text)
-        }
-    }
-
-    private fun toggleInsights() {
-        isInsightsVisible = !isInsightsVisible
-        if (isInsightsVisible) {
-            insightsContainer.visibility = View.VISIBLE
-            insightsChevron.animate().rotation(0f).setDuration(300).start()
-        } else {
-            insightsContainer.visibility = View.GONE
-            insightsChevron.animate().rotation(180f).setDuration(300).start()
-        }
-    }
-
-    private fun handleUserMessage(text: String) {
-        messageInput.text.clear()
-        addUserBubble(text)
-        scrollToBottom()
+    private fun startParallelDownload(model: LocalModel) {
+        currentDownloadingModel = model
+        val destination = localModelRunner.getModelPath(model)
         
-        lifecycleScope.launch {
-            val startTime = System.currentTimeMillis()
-            showThinking()
-            
-            val state = lastKnownState ?: DeviceState()
-            
-            // Route message using the new MessageRouter
-            val result = messageRouter.routeMessage(
-                text = text,
-                isPrivacyModeOn = privacyModeToggle.isChecked,
-                state = state
-            )
-            
-            val endTime = System.currentTimeMillis()
-            val latency = "${(endTime - startTime) / 1000.0}s"
-            
-            hideThinking()
-            addAIResponse(result.response, result.detail, latency)
-            scrollToBottom()
+        destination.parentFile?.mkdirs()
+        if (destination.exists()) destination.delete()
+
+        downloadTitleText.text = "Parallel Downloading ${model.displayName}..."
+        downloadOverlay.visibility = View.VISIBLE
+        btnRetryDownload.visibility = View.GONE
+        downloadProgressBar.progress = 0
+
+        downloader.download(model.downloadUrl, destination, object : ParallelDownloader.DownloadListener {
+            override fun onStart(totalSize: Long) {
+                downloadStatusText.text = "Status: Connecting (Segments: 4)"
+            }
+
+            override fun onProgress(progress: Int, speed: String) {
+                downloadProgressBar.progress = progress
+                downloadPercentText.text = "$progress%"
+                downloadStatusText.text = "Status: Segmented Download Active"
+            }
+
+            override fun onComplete(file: File) {
+                downloadOverlay.visibility = View.GONE
+                Toast.makeText(this@MainActivity, "Download Success! Model Ready.", Toast.LENGTH_LONG).show()
+            }
+
+            override fun onError(error: String) {
+                downloadStatusText.text = "Error: $error"
+                btnRetryDownload.visibility = View.VISIBLE
+                Toast.makeText(this@MainActivity, "Download failed: $error", Toast.LENGTH_LONG).show()
+            }
+        })
+    }
+
+    private fun showCustomRamDialog() {
+        val currentFree = lastKnownState?.ramAvailable ?: 0
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(60, 40, 60, 10)
         }
+        val infoText = TextView(this).apply {
+            text = "Current Free RAM: $currentFree MB"
+            textSize = 16f
+            setTextColor(ContextCompat.getColor(this@MainActivity, android.R.color.black))
+            setPadding(0, 0, 0, 30)
+        }
+        layout.addView(infoText)
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            hint = "Target Free RAM (MB)"
+            setText(currentFree.toString())
+            setSelection(text.length)
+        }
+        layout.addView(input)
+        AlertDialog.Builder(this)
+            .setTitle("Adjust RAM Level")
+            .setView(layout)
+            .setPositiveButton("Set Target") { _, _ ->
+                val target = input.text.toString().toLongOrNull() ?: currentFree
+                ramMonitor.setTargetAvailableRam(target)
+            }
+            .setNeutralButton("Reset") { _, _ -> ramMonitor.freeRam() }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun addUserBubble(text: String) {
         val view = LayoutInflater.from(this).inflate(R.layout.item_chat_user, chatContainer, false)
-        val msgText = view.findViewById<TextView>(R.id.messageText)
-        msgText.text = text
+        view.findViewById<TextView>(R.id.messageText).text = text
         val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         view.findViewById<TextView>(R.id.timestamp).text = timeStr
-
-        val bubbleContainer = view.findViewById<View>(R.id.userBubbleContainer)
-        val actionsLayout = view.findViewById<View>(R.id.userActions)
-        val copyBtn = view.findViewById<ImageButton>(R.id.copyButton)
-        val editBtn = view.findViewById<ImageButton>(R.id.editButton)
-
-        bubbleContainer.setOnClickListener {
-            actionsLayout.visibility = if (actionsLayout.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-        }
-
-        copyBtn.setOnClickListener {
-            copyToClipboard(text)
-            actionsLayout.visibility = View.GONE
-        }
-
-        editBtn.setOnClickListener {
-            messageInput.setText(text)
-            messageInput.requestFocus()
-            actionsLayout.visibility = View.GONE
-        }
-
-        val animation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
-        view.startAnimation(animation)
-        
-        // Add before thinking indicator
         val index = chatContainer.indexOfChild(thinkingIndicator)
         chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
     }
@@ -253,57 +296,19 @@ class MainActivity : AppCompatActivity() {
     private fun addAIResponse(response: String, detail: com.dynamicedgeai.engine.StrategyDetail, latency: String) {
         val view = LayoutInflater.from(this).inflate(R.layout.item_chat_ai, chatContainer, false)
         view.findViewById<TextView>(R.id.messageText).text = response
-        
         view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${detail.strategy.name}"
-        
-        // Use the current model name from localModelRunner
-        val modelName = if (detail.strategy == Strategy.LOCAL) {
-            "${localModelRunner.currentModel.displayName} (On-Device)"
-        } else {
-            "Gemini 1.5 Flash (Cloud)"
-        }
+        val modelName = if (detail.strategy == Strategy.LOCAL) "${localModelRunner.currentModel.displayName} (On-Device)" else "Gemini 1.5 Flash (Cloud)"
         view.findViewById<TextView>(R.id.modelUsedText).text = "Model: $modelName"
-        
         view.findViewById<TextView>(R.id.reasonText).text = "Reason: ${detail.reason}"
         view.findViewById<TextView>(R.id.latencyText).text = "Latency: $latency"
-        
-        val networkUsed = if (detail.strategy == Strategy.CLOUD) "Yes" else "No"
-        view.findViewById<TextView>(R.id.networkUsedText).text = "Network Used: $networkUsed"
-
-        val bubbleContainer = view.findViewById<View>(R.id.aiBubbleContainer)
-        val actionsLayout = view.findViewById<View>(R.id.aiActions)
-        val copyBtn = view.findViewById<ImageButton>(R.id.copyButton)
-
-        bubbleContainer.setOnClickListener {
-            actionsLayout.visibility = if (actionsLayout.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-        }
-
-        copyBtn.setOnClickListener {
-            copyToClipboard(response)
-            actionsLayout.visibility = View.GONE
-        }
-        
-        val animation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
-        view.startAnimation(animation)
-        
-        // Add before thinking indicator
+        view.findViewById<TextView>(R.id.networkUsedText).text = "Network Used: ${if (detail.strategy == Strategy.CLOUD) "Yes" else "No"}"
         val index = chatContainer.indexOfChild(thinkingIndicator)
         chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
     }
 
-    private fun copyToClipboard(text: String) {
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("AI Message", text)
-        clipboard.setPrimaryClip(clip)
-        Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-    }
-
     private fun showThinking() {
         thinkingIndicator.visibility = View.VISIBLE
-        val anim = AlphaAnimation(0.3f, 1.0f)
-        anim.duration = 600
-        anim.repeatMode = Animation.REVERSE
-        anim.repeatCount = Animation.INFINITE
+        val anim = AlphaAnimation(0.3f, 1.0f).apply { duration = 600; repeatMode = Animation.REVERSE; repeatCount = Animation.INFINITE }
         thinkingText.startAnimation(anim)
         scrollToBottom()
     }
@@ -313,9 +318,7 @@ class MainActivity : AppCompatActivity() {
         thinkingIndicator.visibility = View.GONE
     }
 
-    private fun scrollToBottom() {
-        chatScrollView.post { chatScrollView.fullScroll(View.FOCUS_DOWN) }
-    }
+    private fun scrollToBottom() { chatScrollView.post { chatScrollView.fullScroll(View.FOCUS_DOWN) } }
 
     private fun startResourceMonitoring() {
         lifecycleScope.launch {
@@ -325,19 +328,11 @@ class MainActivity : AppCompatActivity() {
                 networkMonitor.observeNetworkQuality(),
                 cpuMonitor.observeCpuUsage(),
                 ramMonitor.observeRamUsage()
-            ) { battery, thermal, network, cpu, ram ->
-                DeviceState(
-                    batteryLevel = battery.first,
-                    isCharging = battery.second,
-                    thermalState = thermal,
-                    networkQuality = network,
-                    cpuUsage = cpu,
-                    ramAvailable = ram.first,
-                    totalRam = ram.second
-                )
-            }.collect { state ->
+            ) { battery: Pair<Float, Boolean>, thermal: ThermalState, network: NetworkQuality, cpu: Int, ram: Pair<Long, Long> ->
+                DeviceState(battery.first, battery.second, network, thermal, cpu, ram.first, ram.second)
+            }.collect { state -> 
                 lastKnownState = state
-                updateUI(state)
+                updateUI(state) 
             }
         }
     }
@@ -345,45 +340,17 @@ class MainActivity : AppCompatActivity() {
     private fun updateUI(state: DeviceState) {
         val ramFormatted = if (state.ramAvailable > 1024) String.format(Locale.US, "%.1f GB", state.ramAvailable / 1024f) else "${state.ramAvailable} MB"
         ramLabel.text = "RAM Free: $ramFormatted"
-        
         val ramRatio = if (state.totalRam > 0) state.ramAvailable.toDouble() / state.totalRam else 1.0
-        
-        ramIndicator.setImageResource(when {
-            ramRatio > 0.30 -> R.drawable.ic_check_green
-            ramRatio > 0.20 -> R.drawable.dot_orange
-            else -> R.drawable.dot_red
-        })
-
+        ramIndicator.setImageResource(when { ramRatio > 0.30 -> R.drawable.ic_check_green; ramRatio > 0.20 -> R.drawable.dot_orange; else -> R.drawable.dot_red })
         cpuLabel.text = "CPU Usage: ${state.cpuUsage}%"
-        cpuIndicator.setImageResource(when {
-            state.cpuUsage < 40 -> R.drawable.dot_green
-            state.cpuUsage < 80 -> R.drawable.dot_orange
-            else -> R.drawable.dot_red
-        })
-        
+        cpuIndicator.setImageResource(when { state.cpuUsage < 40 -> R.drawable.dot_green; state.cpuUsage < 80 -> R.drawable.dot_orange; else -> R.drawable.dot_red })
         val networkIcon = if (state.networkQuality != NetworkQuality.POOR && state.networkQuality != NetworkQuality.UNKNOWN) "🔄" else "⚠️"
-        val networkStr = when(state.networkQuality) {
-            NetworkQuality.EXCELLENT -> "STRONG (85 Mbps)"
-            NetworkQuality.GOOD -> "STRONG (25 Mbps)"
-            NetworkQuality.MODERATE -> "MODERATE (10 Mbps)"
-            NetworkQuality.POOR -> "WEAK (3 Mbps)"
-            else -> "UNKNOWN"
-        }
-        networkLabel.text = "Network: $networkIcon $networkStr"
+        networkLabel.text = "Network: $networkIcon ${state.networkQuality}"
         batteryLabel.text = "Battery Level: ${state.batteryLevel.toInt()}%"
-
-        // Decide current strategy based on state (for UI preview only)
         val detail = decisionEngine.determineStrategy(state)
-        
-        // If Privacy mode is ON, UI should show forced LOCAL
         val displayStrategy = if (privacyModeToggle.isChecked) Strategy.LOCAL else detail.strategy
-        val displayReason = if (privacyModeToggle.isChecked) "Privacy Mode ON" else detail.reason
-        
         insightModeText.text = displayStrategy.name
-        val modeColor = when(displayStrategy) {
-            Strategy.LOCAL -> R.color.mode_local
-            Strategy.CLOUD -> R.color.accent_blue
-        }
+        val modeColor = when(displayStrategy) { Strategy.LOCAL -> R.color.mode_local; Strategy.CLOUD -> R.color.accent_blue }
         insightModeText.setTextColor(ContextCompat.getColor(this, modeColor))
     }
 }

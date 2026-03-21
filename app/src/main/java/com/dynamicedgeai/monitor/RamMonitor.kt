@@ -36,6 +36,18 @@ class RamMonitor(private val context: Context) {
     }
 
     /**
+     * Sets a target available RAM by calculating necessary consumption
+     */
+    fun setTargetAvailableRam(targetMB: Long) {
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+        val actualAvailableMB = memoryInfo.availMem / (1024 * 1024)
+        
+        // simulatedConsumedMB = actualAvailableMB - targetMB
+        simulatedConsumedMB = (actualAvailableMB - targetMB).coerceAtLeast(0)
+    }
+
+    /**
      * Resets simulated consumption
      */
     fun freeRam() {
