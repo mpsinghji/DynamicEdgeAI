@@ -28,7 +28,7 @@ import com.dynamicedgeai.local.LocalModel
 import com.dynamicedgeai.monitor.*
 import com.dynamicedgeai.router.MessageRouter
 import com.dynamicedgeai.util.ParallelDownloader
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -79,9 +79,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var downloadPercentText: TextView
     private lateinit var btnCancelDownload: ImageButton
     private lateinit var btnRetryDownload: ImageButton
+    private lateinit var btnPauseResume: ImageButton
     
     private var lastKnownState: DeviceState? = null
     private var currentDownloadingModel: LocalModel? = null
+    private var isPaused = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,8 +119,9 @@ class MainActivity : AppCompatActivity() {
         downloadPercentText = findViewById(R.id.downloadPercentText)
         btnCancelDownload = findViewById(R.id.btnCancelDownload)
         btnRetryDownload = findViewById(R.id.btnRetryDownload)
+        btnPauseResume = findViewById(R.id.btnPauseResume)
 
-        // Default: Show Insights
+        // Default Visible Insights
         insightsContainer.visibility = View.VISIBLE
         insightsChevron.rotation = 0f
 
@@ -134,8 +137,16 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Download Reset", Toast.LENGTH_SHORT).show()
         }
 
+        btnPauseResume.setOnClickListener {
+            if (isPaused) {
+                downloader.resume()
+            } else {
+                downloader.pause()
+            }
+        }
+
         btnRetryDownload.setOnClickListener {
-            currentDownloadingModel?.let { startParallelDownload(it) }
+            currentDownloadingModel?.let { startParallelDownload(it, true) }
         }
 
         messageInput.setOnEditorActionListener { _, actionId, event ->
@@ -206,7 +217,7 @@ class MainActivity : AppCompatActivity() {
                         localModelRunner.switchModel(selectedModel)
                         Toast.makeText(this, "Switched to ${selectedModel.displayName}", Toast.LENGTH_SHORT).show()
                     } else {
-                        startParallelDownload(selectedModel)
+                        startParallelDownload(selectedModel, false)
                     }
                     true
                 }
@@ -216,40 +227,69 @@ class MainActivity : AppCompatActivity() {
         popup.show()
     }
 
-    private fun startParallelDownload(model: LocalModel) {
+    private fun startParallelDownload(model: LocalModel, resume: Boolean) {
         currentDownloadingModel = model
         val destination = localModelRunner.getModelPath(model)
         
-        destination.parentFile?.mkdirs()
-        if (destination.exists()) destination.delete()
+        if (!resume) {
+            destination.parentFile?.mkdirs()
+            if (destination.exists()) destination.delete()
+        }
 
-        downloadTitleText.text = "Parallel Downloading ${model.displayName}..."
+        downloadTitleText.text = "Downloading ${model.displayName}..."
         downloadOverlay.visibility = View.VISIBLE
         btnRetryDownload.visibility = View.GONE
-        downloadProgressBar.progress = 0
+        btnPauseResume.visibility = View.VISIBLE
+        btnPauseResume.setImageResource(R.drawable.ic_pause)
+        isPaused = false
+        if (!resume) downloadProgressBar.progress = 0
 
         downloader.download(model.downloadUrl, destination, object : ParallelDownloader.DownloadListener {
             override fun onStart(totalSize: Long) {
-                downloadStatusText.text = "Status: Connecting (Segments: 4)"
+                Handler(Looper.getMainLooper()).post {
+                    downloadStatusText.text = "Status: Connecting..."
+                }
             }
 
             override fun onProgress(progress: Int, speed: String) {
-                downloadProgressBar.progress = progress
-                downloadPercentText.text = "$progress%"
-                downloadStatusText.text = "Status: Segmented Download Active"
+                Handler(Looper.getMainLooper()).post {
+                    downloadProgressBar.progress = progress
+                    downloadPercentText.text = "$progress%"
+                    downloadStatusText.text = "Status: Segmented Download Active"
+                }
+            }
+
+            override fun onPaused() {
+                isPaused = true
+                Handler(Looper.getMainLooper()).post {
+                    downloadStatusText.text = "Status: Paused"
+                    btnPauseResume.setImageResource(android.R.drawable.ic_media_play)
+                }
+            }
+
+            override fun onResumed() {
+                isPaused = false
+                Handler(Looper.getMainLooper()).post {
+                    downloadStatusText.text = "Status: Resuming..."
+                    btnPauseResume.setImageResource(R.drawable.ic_pause)
+                }
             }
 
             override fun onComplete(file: File) {
-                downloadOverlay.visibility = View.GONE
-                Toast.makeText(this@MainActivity, "Download Success! Model Ready.", Toast.LENGTH_LONG).show()
+                Handler(Looper.getMainLooper()).post {
+                    downloadOverlay.visibility = View.GONE
+                    Toast.makeText(this@MainActivity, "Download Success! Model Ready.", Toast.LENGTH_LONG).show()
+                }
             }
 
             override fun onError(error: String) {
-                downloadStatusText.text = "Error: $error"
-                btnRetryDownload.visibility = View.VISIBLE
-                Toast.makeText(this@MainActivity, "Download failed: $error", Toast.LENGTH_LONG).show()
+                Handler(Looper.getMainLooper()).post {
+                    downloadStatusText.text = "Error: $error"
+                    btnRetryDownload.visibility = View.VISIBLE
+                    btnPauseResume.visibility = View.GONE
+                }
             }
-        })
+        }, resume)
     }
 
     private fun showCustomRamDialog() {
@@ -330,7 +370,7 @@ class MainActivity : AppCompatActivity() {
                 ramMonitor.observeRamUsage()
             ) { battery: Pair<Float, Boolean>, thermal: ThermalState, network: NetworkQuality, cpu: Int, ram: Pair<Long, Long> ->
                 DeviceState(battery.first, battery.second, network, thermal, cpu, ram.first, ram.second)
-            }.collect { state -> 
+            }.collect { state: DeviceState -> 
                 lastKnownState = state
                 updateUI(state) 
             }
@@ -345,7 +385,14 @@ class MainActivity : AppCompatActivity() {
         cpuLabel.text = "CPU Usage: ${state.cpuUsage}%"
         cpuIndicator.setImageResource(when { state.cpuUsage < 40 -> R.drawable.dot_green; state.cpuUsage < 80 -> R.drawable.dot_orange; else -> R.drawable.dot_red })
         val networkIcon = if (state.networkQuality != NetworkQuality.POOR && state.networkQuality != NetworkQuality.UNKNOWN) "🔄" else "⚠️"
-        networkLabel.text = "Network: $networkIcon ${state.networkQuality}"
+        val networkStr = when(state.networkQuality) {
+            NetworkQuality.EXCELLENT -> "STRONG (85 Mbps)"
+            NetworkQuality.GOOD -> "STRONG (25 Mbps)"
+            NetworkQuality.MODERATE -> "MODERATE (10 Mbps)"
+            NetworkQuality.POOR -> "WEAK (3 Mbps)"
+            else -> "UNKNOWN"
+        }
+        networkLabel.text = "Network: $networkIcon $networkStr"
         batteryLabel.text = "Battery Level: ${state.batteryLevel.toInt()}%"
         val detail = decisionEngine.determineStrategy(state)
         val displayStrategy = if (privacyModeToggle.isChecked) Strategy.LOCAL else detail.strategy
