@@ -18,6 +18,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GEMINI_KEY", "\"AIzaSyCF7VizsgjqQQG3SFSE3CDw1hzMueFvvsM\"")
+        
+        ndk {
+            // Filter for common architectures to reduce APK size
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+        }
     }
 
     buildTypes {

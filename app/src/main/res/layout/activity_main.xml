@@ -96,7 +96,7 @@
         </LinearLayout>
     </RelativeLayout>
 
-    <!-- Insights Card (Default Visible) -->
+    <!-- Insights Card -->
     <LinearLayout
         android:id="@+id/insightsContainer"
         android:layout_width="match_parent"
@@ -206,104 +206,6 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Enhanced Download Progress View -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/downloadOverlay"
-        android:layout_width="220dp"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginBottom="80dp"
-        android:layout_marginEnd="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="8dp"
-        android:visibility="gone">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="12dp"
-            android:background="#FFFFFF">
-
-            <TextView
-                android:id="@+id/downloadTitleText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Downloading Model..."
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="#333333"
-                android:singleLine="true"
-                android:ellipsize="end"/>
-
-            <TextView
-                android:id="@+id/downloadStatusText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Status: Pending"
-                android:textSize="10sp"
-                android:textColor="#666666"
-                android:layout_marginTop="2dp"/>
-
-            <ProgressBar
-                android:id="@+id/downloadProgressBar"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:layout_marginTop="8dp"
-                android:progress="0"
-                android:max="100"
-                android:progressDrawable="@drawable/progress_bar_blue"/>
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp">
-                <TextView
-                    android:id="@+id/downloadPercentText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0%"
-                    android:textSize="10sp"
-                    android:textColor="#666666"/>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:orientation="horizontal">
-
-                    <ImageButton
-                        android:id="@+id/btnRetryDownload"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@android:drawable/ic_menu_rotate"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        app:tint="#2196F3"
-                        android:visibility="gone"
-                        android:layout_marginEnd="8dp"/>
-
-                    <ImageButton
-                        android:id="@+id/btnPauseResume"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_pause"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        app:tint="#666666"
-                        android:layout_marginEnd="8dp"/>
-
-                    <ImageButton
-                        android:id="@+id/btnCancelDownload"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@android:drawable/ic_menu_close_clear_cancel"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        app:tint="#F44336"/>
-                </LinearLayout>
-            </RelativeLayout>
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
     <!-- Chat Area -->
     <ScrollView
         android:id="@+id/chatScrollView"
@@ -392,5 +294,28 @@
                 app:tint="@color/white" />
         </LinearLayout>
     </LinearLayout>
+
+    <!-- Container for Multiple Downloads -->
+    <ScrollView
+        android:id="@+id/downloadContainerScroll"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginBottom="80dp"
+        android:layout_marginEnd="16dp"
+        android:elevation="12dp"
+        android:scrollbars="none"
+        android:overScrollMode="never">
+        <LinearLayout
+            android:id="@+id/downloadContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="end">
+            <!-- Include the download item layout and give it the id the Activity expects -->
+            <include layout="@layout/item_download" android:id="@+id/downloadOverlay" android:visibility="gone" />
+        </LinearLayout>
+    </ScrollView>
 
 </RelativeLayout>
