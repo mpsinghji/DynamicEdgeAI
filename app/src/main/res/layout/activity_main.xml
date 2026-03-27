@@ -295,27 +295,6 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Container for Multiple Downloads -->
-    <ScrollView
-        android:id="@+id/downloadContainerScroll"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginBottom="80dp"
-        android:layout_marginEnd="16dp"
-        android:elevation="12dp"
-        android:scrollbars="none"
-        android:overScrollMode="never">
-        <LinearLayout
-            android:id="@+id/downloadContainer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="end">
-            <!-- Include the download item layout and give it the id the Activity expects -->
-            <include layout="@layout/item_download" android:id="@+id/downloadOverlay" android:visibility="gone" />
-        </LinearLayout>
-    </ScrollView>
-
 </RelativeLayout>
+
+

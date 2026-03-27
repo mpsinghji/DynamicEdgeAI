@@ -1,8 +1,6 @@
 package com.dynamicedgeai
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -12,12 +10,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
-import android.view.animation.AnimationUtils
 import android.view.inputmethod.EditorInfo
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.dynamicedgeai.cloud.CloudModelRunner
@@ -27,10 +23,10 @@ import com.dynamicedgeai.local.LocalModelRunner
 import com.dynamicedgeai.local.LocalModel
 import com.dynamicedgeai.monitor.*
 import com.dynamicedgeai.router.MessageRouter
-import com.dynamicedgeai.util.ParallelDownloader
+import com.dynamicedgeai.util.ModelStatus
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -47,7 +43,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var localModelRunner: LocalModelRunner
     private val cloudModelRunner = CloudModelRunner()
     private lateinit var messageRouter: MessageRouter
-    private val downloader = ParallelDownloader()
 
     private lateinit var ramLabel: TextView
     private lateinit var cpuLabel: TextView
@@ -71,19 +66,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var thinkingIndicator: LinearLayout
     private lateinit var thinkingText: TextView
     
-    // Download UI
-    private lateinit var downloadOverlay: CardView
-    private lateinit var downloadTitleText: TextView
-    private lateinit var downloadStatusText: TextView
-    private lateinit var downloadProgressBar: ProgressBar
-    private lateinit var downloadPercentText: TextView
-    private lateinit var btnCancelDownload: ImageButton
-    private lateinit var btnRetryDownload: ImageButton
-    private lateinit var btnPauseResume: ImageButton
-    
     private var lastKnownState: DeviceState? = null
-    private var currentDownloadingModel: LocalModel? = null
-    private var isPaused = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,15 +94,6 @@ class MainActivity : AppCompatActivity() {
         chatScrollView = findViewById(R.id.chatScrollView)
         thinkingIndicator = findViewById(R.id.thinkingIndicator)
         thinkingText = findViewById(R.id.thinkingText)
-        
-        downloadOverlay = findViewById(R.id.downloadOverlay)
-        downloadTitleText = findViewById(R.id.downloadTitleText)
-        downloadStatusText = findViewById(R.id.downloadStatusText)
-        downloadProgressBar = findViewById(R.id.downloadProgressBar)
-        downloadPercentText = findViewById(R.id.downloadPercentText)
-        btnCancelDownload = findViewById(R.id.btnCancelDownload)
-        btnRetryDownload = findViewById(R.id.btnRetryDownload)
-        btnPauseResume = findViewById(R.id.btnPauseResume)
 
         // Default Visible Insights
         insightsContainer.visibility = View.VISIBLE
@@ -127,27 +101,7 @@ class MainActivity : AppCompatActivity() {
 
         insightsToggle.setOnClickListener { toggleInsights() }
         sendButton.setOnClickListener { trySendMessage() }
-        menuButton.setOnClickListener { showRamMenu(it) }
-        
-        btnCancelDownload.setOnClickListener { 
-            downloader.cancel()
-            val file = currentDownloadingModel?.let { localModelRunner.getModelPath(it) }
-            if (file?.exists() == true) file.delete() 
-            downloadOverlay.visibility = View.GONE
-            Toast.makeText(this, "Download Reset", Toast.LENGTH_SHORT).show()
-        }
-
-        btnPauseResume.setOnClickListener {
-            if (isPaused) {
-                downloader.resume()
-            } else {
-                downloader.pause()
-            }
-        }
-
-        btnRetryDownload.setOnClickListener {
-            currentDownloadingModel?.let { startParallelDownload(it, true) }
-        }
+        menuButton.setOnClickListener { showBottomSheetMenu() }
 
         messageInput.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_SEND || 
@@ -175,6 +129,32 @@ class MainActivity : AppCompatActivity() {
     private fun trySendMessage() {
         val text = messageInput.text.toString()
         if (text.isNotBlank()) {
+            // Guard: If privacy mode is ON and no local model is available, block
+            if (privacyModeToggle.isChecked && !localModelRunner.hasAnyModelAvailable()) {
+                Toast.makeText(
+                    this,
+                    "No local model available. Download a model from Models menu.",
+                    Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+
+            // Guard: If privacy mode is ON, ensure current model is valid
+            if (privacyModeToggle.isChecked && !localModelRunner.isModelAvailable(localModelRunner.currentModel)) {
+                val available = localModelRunner.getFirstAvailableModel()
+                if (available != null) {
+                    localModelRunner.switchModel(available)
+                    Toast.makeText(this, "Auto-switched to ${available.displayName}", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Current model is corrupted. Download or repair from Models menu.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return
+                }
+            }
+
             messageInput.text.clear()
             handleUserMessage(text)
         }
@@ -195,101 +175,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showRamMenu(view: View) {
-        val popup = PopupMenu(this, view)
-        popup.menu.add(0, 101, 0, "--- RESOURCE TOOLS ---")
-        popup.menu.add(0, 1, 1, "Adjust RAM Level (Target)")
-        popup.menu.add(0, 102, 2, "--- LOCAL MODELS ---")
-        
-        LocalModel.values().forEach { model ->
-            val isReady = localModelRunner.isModelAvailable(model)
-            val status = if (isReady) "Ready" else "Download"
-            val selected = if (localModelRunner.currentModel == model) " ✓" else ""
-            popup.menu.add(0, model.ordinal + 10, 3, "${model.displayName} ($status)$selected")
+    /**
+     * Shows a grid-style bottom sheet menu (replaces the old PopupMenu).
+     */
+    private fun showBottomSheetMenu() {
+        val dialog = BottomSheetDialog(this)
+        val sheetView = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_menu, null)
+        dialog.setContentView(sheetView)
+
+        // Model Manager
+        sheetView.findViewById<View>(R.id.menuModelManager).setOnClickListener {
+            dialog.dismiss()
+            startActivity(Intent(this, ModelManagerActivity::class.java))
         }
 
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> { showCustomRamDialog(); true }
-                in 10..20 -> {
-                    val selectedModel = LocalModel.values()[item.itemId - 10]
-                    if (localModelRunner.isModelAvailable(selectedModel)) {
-                        localModelRunner.switchModel(selectedModel)
-                        Toast.makeText(this, "Switched to ${selectedModel.displayName}", Toast.LENGTH_SHORT).show()
-                    } else {
-                        startParallelDownload(selectedModel, false)
-                    }
-                    true
-                }
-                else -> false
-            }
-        }
-        popup.show()
-    }
-
-    private fun startParallelDownload(model: LocalModel, resume: Boolean) {
-        currentDownloadingModel = model
-        val destination = localModelRunner.getModelPath(model)
-        
-        if (!resume) {
-            destination.parentFile?.mkdirs()
-            if (destination.exists()) destination.delete()
+        // Adjust RAM
+        sheetView.findViewById<View>(R.id.menuAdjustRam).setOnClickListener {
+            dialog.dismiss()
+            showCustomRamDialog()
         }
 
-        downloadTitleText.text = "Downloading ${model.displayName}..."
-        downloadOverlay.visibility = View.VISIBLE
-        btnRetryDownload.visibility = View.GONE
-        btnPauseResume.visibility = View.VISIBLE
-        btnPauseResume.setImageResource(R.drawable.ic_pause)
-        isPaused = false
-        if (!resume) downloadProgressBar.progress = 0
-
-        downloader.download(model.downloadUrl, destination, object : ParallelDownloader.DownloadListener {
-            override fun onStart(totalSize: Long) {
-                Handler(Looper.getMainLooper()).post {
-                    downloadStatusText.text = "Status: Connecting..."
-                }
+        // Current model info
+        val currentModel = localModelRunner.currentModel
+        val modelStatus = localModelRunner.getModelStatus(currentModel)
+        sheetView.findViewById<TextView>(R.id.txtCurrentModelName).text = currentModel.displayName
+        val statusText = sheetView.findViewById<TextView>(R.id.txtCurrentModelStatus)
+        when (modelStatus) {
+            ModelStatus.DOWNLOADED -> {
+                statusText.text = "Ready ✓"
+                statusText.setTextColor(0xFF4CAF50.toInt())
             }
-
-            override fun onProgress(progress: Int, speed: String) {
-                Handler(Looper.getMainLooper()).post {
-                    downloadProgressBar.progress = progress
-                    downloadPercentText.text = "$progress%"
-                    downloadStatusText.text = "Status: Segmented Download Active"
-                }
+            ModelStatus.CORRUPTED -> {
+                statusText.text = "⚠ Corrupted"
+                statusText.setTextColor(0xFFF44336.toInt())
             }
-
-            override fun onPaused() {
-                isPaused = true
-                Handler(Looper.getMainLooper()).post {
-                    downloadStatusText.text = "Status: Paused"
-                    btnPauseResume.setImageResource(android.R.drawable.ic_media_play)
-                }
+            else -> {
+                statusText.text = "Not Downloaded"
+                statusText.setTextColor(0xFF999999.toInt())
             }
+        }
 
-            override fun onResumed() {
-                isPaused = false
-                Handler(Looper.getMainLooper()).post {
-                    downloadStatusText.text = "Status: Resuming..."
-                    btnPauseResume.setImageResource(R.drawable.ic_pause)
-                }
-            }
+        // Tap current model row to open Model Manager
+        sheetView.findViewById<View>(R.id.currentModelRow).setOnClickListener {
+            dialog.dismiss()
+            startActivity(Intent(this, ModelManagerActivity::class.java))
+        }
 
-            override fun onComplete(file: File) {
-                Handler(Looper.getMainLooper()).post {
-                    downloadOverlay.visibility = View.GONE
-                    Toast.makeText(this@MainActivity, "Download Success! Model Ready.", Toast.LENGTH_LONG).show()
-                }
-            }
-
-            override fun onError(error: String) {
-                Handler(Looper.getMainLooper()).post {
-                    downloadStatusText.text = "Error: $error"
-                    btnRetryDownload.visibility = View.VISIBLE
-                    btnPauseResume.visibility = View.GONE
-                }
-            }
-        }, resume)
+        dialog.show()
     }
 
     private fun showCustomRamDialog() {

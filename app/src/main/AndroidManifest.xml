@@ -21,5 +21,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="com.dynamicedgeai.ModelManagerActivity"
+            android:exported="false"
+            android:label="Model Manager" />
     </application>
 </manifest>
