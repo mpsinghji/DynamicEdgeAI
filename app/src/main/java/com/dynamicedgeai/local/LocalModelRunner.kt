@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.random.Random
 
 class LocalModelRunner(private val context: Context) {
 
@@ -119,13 +120,14 @@ class LocalModelRunner(private val context: Context) {
         return try {
             val options = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile.absolutePath)
-                // Reduced from 512 → 200 to prevent the model from generating
-                // verbose multi-part replies before we can cut it off.
-                .setMaxTokens(200)
+                // 512 tokens: enough for full detailed answers (recipes, steps, etc.)
+                .setMaxTokens(512)
                 // --- Improvement 1: Sampling Parameters ---
                 .setTemperature(0.8f)
                 .setTopK(40)
-                .setRandomSeed(System.currentTimeMillis().toInt())
+                // kotlin.random.Random gives a truly unpredictable seed each session,
+                // unlike currentTimeMillis which can overflow to similar negatives.
+                .setRandomSeed(Random.nextInt())
                 .build()
 
             llmInference = LlmInference.createFromOptions(context, options)
@@ -147,8 +149,10 @@ class LocalModelRunner(private val context: Context) {
     // --- Improvement 3: Output Cleaning ---
     // 1. Truncate at the first <end_of_turn> tag (model signalling it is done).
     // 2. Strip any other leaked control tags.
-    // 3. Limit to the first 2 non-empty paragraphs so the model can never
-    //    produce a double-greeting like "Hi!\n\nWhat's up?\n\nWhat can I help with?"
+    // 3. Smart greeting-flood detection: if the model generated 3+ tiny paragraphs
+    //    that are ALL short (≤ 80 chars), it is repeating greeting variants — keep
+    //    only the first one.  For real answers (steps, lists, explanations) where
+    //    paragraphs are longer or fewer, the full response is kept intact.
     private fun cleanResponse(raw: String): String {
         // Step 1: cut off at the model's own end-of-turn signal
         val stopIndex = raw.indexOf("<end_of_turn>")
@@ -161,9 +165,17 @@ class LocalModelRunner(private val context: Context) {
             .replace("<start_of_turn>", "")
             .trim()
 
-        // Step 3: keep only the first 2 non-empty paragraphs
+        // Step 3: smart paragraph filtering
         val paragraphs = stripped.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }
-        return paragraphs.take(2).joinToString("\n\n")
+        // "Greeting flood": 3+ paragraphs where every block is ≤ 80 chars
+        // (typical of repetitive greetings). Collapse to just the first one.
+        val isGreetingFlood = paragraphs.size >= 3 && paragraphs.all { it.length <= 80 }
+        return if (isGreetingFlood) {
+            paragraphs.first()
+        } else {
+            // Full answer — return everything, do not truncate
+            stripped
+        }
     }
 
     suspend fun runInference(prompt: String): String = withContext(Dispatchers.Default) {
