@@ -119,7 +119,13 @@ class LocalModelRunner(private val context: Context) {
         return try {
             val options = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile.absolutePath)
-                .setMaxTokens(512)
+                // Reduced from 512 → 200 to prevent the model from generating
+                // verbose multi-part replies before we can cut it off.
+                .setMaxTokens(200)
+                // --- Improvement 1: Sampling Parameters ---
+                .setTemperature(0.8f)
+                .setTopK(40)
+                .setRandomSeed(System.currentTimeMillis().toInt())
                 .build()
 
             llmInference = LlmInference.createFromOptions(context, options)
@@ -130,6 +136,34 @@ class LocalModelRunner(private val context: Context) {
             diagnosticInfo = "Init Failed: ${e.localizedMessage}"
             false
         }
+    }
+
+    // --- Improvement 2: Gemma 2B Chat Template ---
+    // Wraps the raw user query in the tags Gemma 2B expects so it behaves as a
+    // chat assistant rather than a plain text completer.
+    private fun applyGemmaChatTemplate(userQuery: String): String =
+        "<start_of_turn>user\n${userQuery.trim()}<end_of_turn>\n<start_of_turn>model\n"
+
+    // --- Improvement 3: Output Cleaning ---
+    // 1. Truncate at the first <end_of_turn> tag (model signalling it is done).
+    // 2. Strip any other leaked control tags.
+    // 3. Limit to the first 2 non-empty paragraphs so the model can never
+    //    produce a double-greeting like "Hi!\n\nWhat's up?\n\nWhat can I help with?"
+    private fun cleanResponse(raw: String): String {
+        // Step 1: cut off at the model's own end-of-turn signal
+        val stopIndex = raw.indexOf("<end_of_turn>")
+        val actualResponse = if (stopIndex != -1) raw.substring(0, stopIndex) else raw
+
+        // Step 2: strip remaining control tokens
+        val stripped = actualResponse
+            .replace("<start_of_turn>model", "")
+            .replace("<start_of_turn>user", "")
+            .replace("<start_of_turn>", "")
+            .trim()
+
+        // Step 3: keep only the first 2 non-empty paragraphs
+        val paragraphs = stripped.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }
+        return paragraphs.take(2).joinToString("\n\n")
     }
 
     suspend fun runInference(prompt: String): String = withContext(Dispatchers.Default) {
@@ -143,8 +177,14 @@ class LocalModelRunner(private val context: Context) {
                     "Response: I've processed your prompt about \"$prompt\" locally."
         }
 
+        // Apply chat template before sending to the engine
+        val formattedPrompt = applyGemmaChatTemplate(prompt)
+
         return@withContext try {
-            llmInference?.generateResponse(prompt) ?: "No response from local model."
+            val rawResponse = llmInference?.generateResponse(formattedPrompt)
+                ?: "No response from local model."
+            // Strip any leaked system tags before displaying
+            cleanResponse(rawResponse)
         } catch (e: Exception) {
             "Local Error: ${e.localizedMessage}"
         }

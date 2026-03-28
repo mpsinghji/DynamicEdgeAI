@@ -15,9 +15,7 @@ enum class LocalModel(
         expectedSizeBytes = 1_500_000_000L,
         description = "Google Gemma 2B — lightweight, fast on-device model",
         isRecommended = true
-    );
-
-    /*
+    ),
     DEEPSEEK_R1(
         "DeepSeek-R1 1.5B",
         "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
@@ -33,8 +31,7 @@ enum class LocalModel(
         expectedSizeBytes = 480_000_000L,
         description = "TinyLlama 1.1B (GGUF)",
         isRecommended = false
-    )
-    */
+    );
 
     /** Human-readable file size string */
     val fileSizeLabel: String

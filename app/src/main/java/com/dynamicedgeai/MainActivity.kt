@@ -68,6 +68,10 @@ class MainActivity : AppCompatActivity() {
     
     private var lastKnownState: DeviceState? = null
 
+    // Guard: prevents double-send when the IME "Send" key fires both
+    // the EditorAction callback AND a sendButton click simultaneously.
+    private var isSending = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -127,6 +131,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun trySendMessage() {
+        // Block re-entry: do nothing if we are already waiting for a response.
+        if (isSending) return
+
         val text = messageInput.text.toString()
         if (text.isNotBlank()) {
             // Guard: If privacy mode is ON and no local model is available, block
@@ -155,6 +162,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            isSending = true
+            sendButton.isEnabled = false   // visual feedback: greyed-out while thinking
             messageInput.text.clear()
             handleUserMessage(text)
         }
@@ -172,6 +181,9 @@ class MainActivity : AppCompatActivity() {
             hideThinking()
             addAIResponse(result.response, result.detail, latency)
             scrollToBottom()
+            // Unlock send now that the response has been delivered
+            isSending = false
+            sendButton.isEnabled = true
         }
     }
 
