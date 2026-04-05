@@ -1,41 +1,49 @@
-# Built artifacts
-bin/
-gen/
-out/
+# Build artifacts
 build/
 app/build/
 .gradle/
+.externalNativeBuild/
+.cxx/
+out/
+bin/
+gen/
 
-# Local configuration files
+# IDE
+.idea/
+*.iml
+.kotlin/
+
+# Local configs
 local.properties
-.idea/workspace.xml
-.idea/caches/
-.idea/libraries/
-.idea/modules.xml
-.idea/navEditor.xml
-.idea/assetWizardSettings.xml
-.idea/vcs.xml
+gradle.properties
+secrets.xml
 
-# Keystore files
+# Keystore
 *.jks
 *.keystore
 
-# External native build folder
-.externalNativeBuild/
-.cxx/
-
-# Log files
+# Logs
 *.log
+hs_err_pid*
 
-# OS generated files
+# Python
+__pycache__/
+*.pyc
+
+# Android artifacts
+*.apk
+*.aab
+
+# AI models
+*.gguf
+*.bin
+*.safetensors
+*.onnx
+*.pt
+
+# OS
 .DS_Store
 Thumbs.db
 
-# Android Studio / IntelliJ specific
-*.iml
-.navigation/
-captures/
-
-# API keys / secrets (SAFEGUARDED)
-secrets.xml
-gradle.properties
+# temp
+tmp_*

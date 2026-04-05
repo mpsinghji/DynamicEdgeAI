@@ -109,39 +109,13 @@
             android:background="#E0E0E0" />
     </LinearLayout>
 
+    <!-- Downloaded model list — populated dynamically by MainActivity -->
     <LinearLayout
-        android:id="@+id/currentModelRow"
+        android:id="@+id/modelListContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:orientation="vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="8dp" />
 
-        <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/ic_check_green" />
-
-        <TextView
-            android:id="@+id/txtCurrentModelName"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="Gemma 2B"
-            android:textSize="13sp"
-            android:textColor="#333333"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/txtCurrentModelStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Ready"
-            android:textSize="11sp"
-            android:textColor="#4CAF50" />
-    </LinearLayout>
 </LinearLayout>

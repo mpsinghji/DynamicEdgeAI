@@ -1,204 +1,240 @@
 package com.dynamicedgeai.local
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import com.dynamicedgeai.util.IntegrityResult
 import com.dynamicedgeai.util.ModelIntegrityChecker
 import com.dynamicedgeai.util.ModelStatus
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.random.Random
 
+/**
+ * Unified local inference runner.
+ *
+ * Routes by model type:
+ *  - Gemma 2B (.bin)  -> MediaPipe LlmInference
+ *  - TinyLlama (.gguf) / DeepSeek (.gguf) -> GgufModelEngine (llama.cpp)
+ */
 class LocalModelRunner(private val context: Context) {
 
-    private var llmInference: LlmInference? = null
-    var currentModel = LocalModel.GEMMA_2B
+    private val tag = "LocalModelRunner"
+
+    // ── Persistence ───────────────────────────────────────────────────────────
+
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("LocalModelPrefs", Context.MODE_PRIVATE)
+
+    companion object {
+        private const val PREF_KEY_MODEL = "selected_model"
+    }
+
+    private fun restoreSavedModel(): LocalModel {
+        val saved = prefs.getString(PREF_KEY_MODEL, null)
+        return LocalModel.values().firstOrNull { it.name == saved } ?: LocalModel.GEMMA_2B
+    }
+
+    private fun saveModel(model: LocalModel) {
+        prefs.edit().putString(PREF_KEY_MODEL, model.name).apply()
+    }
+
+    // ── State ─────────────────────────────────────────────────────────────────
+
+    var currentModel: LocalModel = restoreSavedModel()
         private set
 
     var isInitialized = false
         private set
 
+    // MediaPipe engine — used for Gemma 2B .bin only
+    private var llmInference: LlmInference? = null
+
+    // llama.cpp engine — used for all .gguf models
+    private var ggufEngine: GgufModelEngine? = null
+
     private var diagnosticInfo: String = "Ready"
 
-    /**
-     * Priority Path Check: ADB -> External (New) -> Internal (Legacy)
-     */
+    // ── Path resolution ───────────────────────────────────────────────────────
+
     fun getModelPath(model: LocalModel): File {
-        // 1. Check /data/local/tmp (ADB Pushed)
-        val adbFile = File("/data/local/tmp/${model.fileName}")
-        if (adbFile.exists()) return adbFile
-
-        // 2. Check App External Files (Recommended for large models)
-        val externalFile = File(context.getExternalFilesDir(null), model.fileName)
-        if (externalFile.exists()) return externalFile
-
-        // 3. Check App Internal Files (Old location)
-        val internalFile = File(context.filesDir, model.fileName)
-        if (internalFile.exists()) return internalFile
-
-        // Default to external for new downloads
-        return externalFile
+        val adb = File("/data/local/tmp/${model.fileName}")
+        if (adb.exists()) return adb
+        val ext = File(context.getExternalFilesDir(null), model.fileName)
+        if (ext.exists()) return ext
+        val int_ = File(context.filesDir, model.fileName)
+        if (int_.exists()) return int_
+        return ext   // canonical "expected" path even if absent
     }
 
-    /**
-     * Checks if a model is available AND passes integrity checks.
-     */
-    fun isModelAvailable(model: LocalModel): Boolean {
-        return getModelStatus(model) == ModelStatus.DOWNLOADED
-    }
+    fun isModelAvailable(model: LocalModel): Boolean =
+        getModelStatus(model) == ModelStatus.DOWNLOADED
 
-    /**
-     * Returns the detailed status of a model using integrity validation.
-     */
     fun getModelStatus(model: LocalModel): ModelStatus {
         val path = getModelPath(model)
         if (!path.exists()) return ModelStatus.NOT_DOWNLOADED
-
         return when (ModelIntegrityChecker.checkIntegrity(path, model.expectedSizeBytes)) {
-            IntegrityResult.VALID -> ModelStatus.DOWNLOADED
-            IntegrityResult.MISSING -> ModelStatus.NOT_DOWNLOADED
-            IntegrityResult.SIZE_MISMATCH, IntegrityResult.CORRUPTED -> ModelStatus.CORRUPTED
+            IntegrityResult.VALID                                      -> ModelStatus.DOWNLOADED
+            IntegrityResult.MISSING                                    -> ModelStatus.NOT_DOWNLOADED
+            IntegrityResult.SIZE_MISMATCH, IntegrityResult.CORRUPTED  -> ModelStatus.CORRUPTED
         }
     }
 
-    /**
-     * Deletes a downloaded model and resets state if it was the current model.
-     * @return true if file was successfully deleted or didn't exist
-     */
     fun deleteModel(model: LocalModel): Boolean {
         val path = getModelPath(model)
         val deleted = if (path.exists()) path.delete() else true
-        if (model == currentModel) {
-            isInitialized = false
-            try { llmInference?.close() } catch (e: Exception) {}
-            llmInference = null
-        }
+        if (model == currentModel) tearDown()
         return deleted
     }
 
     fun switchModel(model: LocalModel): Boolean {
+        tearDown()
         currentModel = model
-        isInitialized = false
-        try { llmInference?.close() } catch (e: Exception) {}
-        llmInference = null
+        saveModel(model)
         return isModelAvailable(model)
     }
 
-    /**
-     * Checks if ANY local model is downloaded and valid.
-     */
-    fun hasAnyModelAvailable(): Boolean {
-        return LocalModel.values().any { isModelAvailable(it) }
+    fun hasAnyModelAvailable() = LocalModel.values().any { isModelAvailable(it) }
+    fun getFirstAvailableModel() = LocalModel.values().firstOrNull { isModelAvailable(it) }
+
+    // ── Engine lifecycle ──────────────────────────────────────────────────────
+
+    private fun tearDown() {
+        isInitialized = false
+        try { llmInference?.close() } catch (e: Exception) {}
+        llmInference = null
+        ggufEngine?.release()
+        ggufEngine = null
     }
 
     /**
-     * Returns the first available (downloaded + valid) model, or null.
+     * Ensures the correct engine is loaded for [currentModel].
+     * @return true if inference can proceed.
      */
-    fun getFirstAvailableModel(): LocalModel? {
-        return LocalModel.values().firstOrNull { isModelAvailable(it) }
-    }
-
-    private fun ensureInitialized(): Boolean {
-        if (isInitialized && llmInference != null) return true
+    private suspend fun ensureInitialized(): Boolean {
+        if (isInitialized) return true
 
         val modelFile = getModelPath(currentModel)
         if (!modelFile.exists()) {
-            diagnosticInfo = "Model file not found at ${modelFile.absolutePath}"
+            Log.e(tag, "Model file not found: ${modelFile.absolutePath}")
+            return false
+        }
+        if (getModelStatus(currentModel) != ModelStatus.DOWNLOADED) {
+            Log.e(tag, "Model status not DOWNLOADED for ${currentModel.displayName}")
             return false
         }
 
-        // Run integrity check before initializing
-        val status = getModelStatus(currentModel)
-        if (status != ModelStatus.DOWNLOADED) {
-            diagnosticInfo = "Model file is corrupted or incomplete"
-            return false
+        return if (currentModel.isGguf) {
+            initGgufEngine(modelFile)
+        } else {
+            initMediaPipeEngine(modelFile)
         }
+    }
 
+    // LocalModelRunner.kt — replace initGgufEngine entirely
+
+    private suspend fun initGgufEngine(modelFile: File): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val engine = GgufModelEngine(context.contentResolver, currentModel)
+
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    modelFile
+                )
+
+                val result: String = engine.load(uri.toString()) // returns "OK" or error message
+
+                if (result == "OK") {
+                    ggufEngine = engine
+                    isInitialized = true
+                    Log.i(tag, "GGUF engine ready: ${currentModel.displayName}")
+                    true
+                } else {
+                    engine.release()
+                    diagnosticInfo = result  // contains the actual error string
+                    Log.e(tag, "GGUF engine failed: $result")
+                    false
+                }
+            } catch (e: Exception) {
+                diagnosticInfo = e.localizedMessage ?: "Unknown error"
+                Log.e(tag, "GGUF engine exception: ${e.localizedMessage}", e)
+                false
+            }
+        }
+    }
+
+    private fun initMediaPipeEngine(modelFile: File): Boolean {
         return try {
+            Log.i(tag, "Loading Gemma via MediaPipe from ${modelFile.absolutePath}")
             val options = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile.absolutePath)
-                // 512 tokens: enough for full detailed answers (recipes, steps, etc.)
                 .setMaxTokens(512)
-                // --- Improvement 1: Sampling Parameters ---
-                .setTemperature(0.8f)
+                .setTemperature(0.7f)
                 .setTopK(40)
-                // kotlin.random.Random gives a truly unpredictable seed each session,
-                // unlike currentTimeMillis which can overflow to similar negatives.
                 .setRandomSeed(Random.nextInt())
                 .build()
-
             llmInference = LlmInference.createFromOptions(context, options)
             isInitialized = true
-            diagnosticInfo = "Real Engine Active"
+            Log.i(tag, "MediaPipe engine ready: ${currentModel.displayName}")
             true
         } catch (e: Exception) {
-            diagnosticInfo = "Init Failed: ${e.localizedMessage}"
+            Log.e(tag, "MediaPipe engine failed: ${e.localizedMessage}", e)
             false
         }
     }
 
-    // --- Improvement 2: Gemma 2B Chat Template ---
-    // Wraps the raw user query in the tags Gemma 2B expects so it behaves as a
-    // chat assistant rather than a plain text completer.
-    private fun applyGemmaChatTemplate(userQuery: String): String =
-        "<start_of_turn>user\n${userQuery.trim()}<end_of_turn>\n<start_of_turn>model\n"
+    // ── Gemma chat template (MediaPipe only) ──────────────────────────────────
 
-    // --- Improvement 3: Output Cleaning ---
-    // 1. Truncate at the first <end_of_turn> tag (model signalling it is done).
-    // 2. Strip any other leaked control tags.
-    // 3. Smart greeting-flood detection: if the model generated 3+ tiny paragraphs
-    //    that are ALL short (≤ 80 chars), it is repeating greeting variants — keep
-    //    only the first one.  For real answers (steps, lists, explanations) where
-    //    paragraphs are longer or fewer, the full response is kept intact.
-    private fun cleanResponse(raw: String): String {
-        // Step 1: cut off at the model's own end-of-turn signal
-        val stopIndex = raw.indexOf("<end_of_turn>")
-        val actualResponse = if (stopIndex != -1) raw.substring(0, stopIndex) else raw
-
-        // Step 2: strip remaining control tokens
-        val stripped = actualResponse
-            .replace("<start_of_turn>model", "")
-            .replace("<start_of_turn>user", "")
-            .replace("<start_of_turn>", "")
-            .trim()
-
-        // Step 3: smart paragraph filtering
-        val paragraphs = stripped.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }
-        // "Greeting flood": 3+ paragraphs where every block is ≤ 80 chars
-        // (typical of repetitive greetings). Collapse to just the first one.
-        val isGreetingFlood = paragraphs.size >= 3 && paragraphs.all { it.length <= 80 }
-        return if (isGreetingFlood) {
-            paragraphs.first()
-        } else {
-            // Full answer — return everything, do not truncate
-            stripped
-        }
+    private fun applyGemmaTemplate(q: String): String {
+        val usrOpen  = "\u003cstart_of_turn\u003euser\n"
+        val usrClose = "\u003cend_of_turn\u003e\n"
+        val mdlOpen  = "\u003cstart_of_turn\u003emodel\n"
+        return "$usrOpen${q.trim()}$usrClose$mdlOpen"
     }
+
+    private fun cleanGemmaResponse(raw: String): String {
+        var r = raw
+        listOf(
+            "\u003cend_of_turn\u003e",
+            "\u003cstart_of_turn\u003emodel",
+            "\u003cstart_of_turn\u003euser",
+            "\u003cstart_of_turn\u003e"
+        ).forEach { r = r.replace(it, "") }
+        r = r.replace(Regex("\n{3,}"), "\n\n").trim()
+        val paras = r.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }
+        return if (paras.size >= 3 && paras.all { it.length <= 80 }) paras.first() else r
+    }
+
+    // ── Public inference entry-point ──────────────────────────────────────────
 
     suspend fun runInference(prompt: String): String = withContext(Dispatchers.Default) {
         val ready = ensureInitialized()
 
-        if (!ready || llmInference == null) {
-            delay(3000)
-            return@withContext "[LOCAL AI] Generated by ${currentModel.displayName}\n\n" +
-                    "Status: ON-DEVICE EXECUTION\n" +
+        if (!ready) {
+            val errorMsg = "⚠ Model not ready: ${currentModel.displayName}\n" +
                     "File: ${getModelPath(currentModel).absolutePath}\n" +
-                    "Response: I've processed your prompt about \"$prompt\" locally."
+                    "Reason: $diagnosticInfo"
+            return@withContext errorMsg
         }
 
-        // Apply chat template before sending to the engine
-        val formattedPrompt = applyGemmaChatTemplate(prompt)
-
         return@withContext try {
-            val rawResponse = llmInference?.generateResponse(formattedPrompt)
-                ?: "No response from local model."
-            // Strip any leaked system tags before displaying
-            cleanResponse(rawResponse)
+            if (currentModel.isGguf) {
+                // llama.cpp path
+                ggufEngine?.generate(prompt) ?: "GGUF engine not initialized."
+            } else {
+                // MediaPipe path (Gemma 2B)
+                val formatted = applyGemmaTemplate(prompt)
+                val raw = llmInference?.generateResponse(formatted)
+                    ?: "No response from MediaPipe engine."
+                cleanGemmaResponse(raw)
+            }
         } catch (e: Exception) {
-            "Local Error: ${e.localizedMessage}"
+            Log.e(tag, "Inference error", e)
+            "Local inference error: ${e.localizedMessage}"
         }
     }
 }

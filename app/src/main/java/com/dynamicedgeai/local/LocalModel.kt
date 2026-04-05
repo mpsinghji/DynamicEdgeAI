@@ -33,6 +33,9 @@ enum class LocalModel(
         isRecommended = false
     );
 
+    /** True for GGUF models (llama.cpp), false for .bin models (MediaPipe) */
+    val isGguf: Boolean get() = fileName.endsWith(".gguf")
+
     /** Human-readable file size string */
     val fileSizeLabel: String
         get() {

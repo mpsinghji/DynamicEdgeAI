@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.dynamicedgeai"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.dynamicedgeai"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -21,7 +21,8 @@ android {
         
         ndk {
             // Filter for common architectures to reduce APK size
-            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+            // llamacpp-kotlin only supports arm64-v8a
+            abiFilters.addAll(listOf("arm64-v8a"))
         }
     }
 
@@ -67,7 +68,11 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
-    
-    // Stable version of MediaPipe GenAI
+
+    // MediaPipe GenAI — used only for Gemma 2B (.bin format)
     implementation("com.google.mediapipe:tasks-genai:0.10.14")
-}
+
+    // llamacpp-kotlin (Maven Central) — real llama.cpp bindings for GGUF models
+    // Supports DeepSeek-R1, TinyLlama, and any other arm64-v8a GGUF model
+    implementation("io.github.ljcamargo:llamacpp-kotlin:0.2.0")
+}

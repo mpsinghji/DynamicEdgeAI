@@ -188,49 +188,107 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Shows a grid-style bottom sheet menu (replaces the old PopupMenu).
+     * Shows the bottom sheet menu.
+     * - Top icons: Models (open manager) | RAM (adjust)
+     * - Below: Every DOWNLOADED model as a tappable row with active indicator.
+     *          Tapping a non-active model switches to it immediately.
      */
     private fun showBottomSheetMenu() {
         val dialog = BottomSheetDialog(this)
         val sheetView = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_menu, null)
         dialog.setContentView(sheetView)
 
-        // Model Manager
+        // ── Top icon buttons ─────────────────────────────────────────────────
         sheetView.findViewById<View>(R.id.menuModelManager).setOnClickListener {
             dialog.dismiss()
             startActivity(Intent(this, ModelManagerActivity::class.java))
         }
-
-        // Adjust RAM
         sheetView.findViewById<View>(R.id.menuAdjustRam).setOnClickListener {
             dialog.dismiss()
             showCustomRamDialog()
         }
 
-        // Current model info
-        val currentModel = localModelRunner.currentModel
-        val modelStatus = localModelRunner.getModelStatus(currentModel)
-        sheetView.findViewById<TextView>(R.id.txtCurrentModelName).text = currentModel.displayName
-        val statusText = sheetView.findViewById<TextView>(R.id.txtCurrentModelStatus)
-        when (modelStatus) {
-            ModelStatus.DOWNLOADED -> {
-                statusText.text = "Ready ✓"
-                statusText.setTextColor(0xFF4CAF50.toInt())
-            }
-            ModelStatus.CORRUPTED -> {
-                statusText.text = "⚠ Corrupted"
-                statusText.setTextColor(0xFFF44336.toInt())
-            }
-            else -> {
-                statusText.text = "Not Downloaded"
-                statusText.setTextColor(0xFF999999.toInt())
-            }
-        }
+        // ── Downloaded model list ────────────────────────────────────────────
+        val container = sheetView.findViewById<LinearLayout>(R.id.modelListContainer)
+        container.removeAllViews()
 
-        // Tap current model row to open Model Manager
-        sheetView.findViewById<View>(R.id.currentModelRow).setOnClickListener {
-            dialog.dismiss()
-            startActivity(Intent(this, ModelManagerActivity::class.java))
+        val downloadedModels = LocalModel.values().filter { localModelRunner.isModelAvailable(it) }
+
+        if (downloadedModels.isEmpty()) {
+            val hint = TextView(this).apply {
+                text = "No models downloaded yet.\nTap  Models  above to download one."
+                textSize = 13f
+                setTextColor(0xFF999999.toInt())
+                gravity = android.view.Gravity.CENTER
+                setPadding(32, 24, 32, 16)
+            }
+            container.addView(hint)
+        } else {
+            downloadedModels.forEach { model ->
+                val isActive = (localModelRunner.currentModel == model)
+
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    setPadding(48, 22, 48, 22)
+                    isClickable = true
+                    isFocusable = true
+                    // Resolve the theme attribute to an actual drawable resource ID
+                    val tv = android.util.TypedValue()
+                    if (context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)) {
+                        setBackgroundResource(tv.resourceId)
+                    }
+                }
+
+                // Checkmark (visible only for active model)
+                val icon = ImageView(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(40, 40)
+                    visibility = if (isActive) View.VISIBLE else View.INVISIBLE
+                    if (isActive) setImageResource(R.drawable.ic_check_green)
+                }
+                row.addView(icon)
+
+                // Model name
+                val nameView = TextView(this).apply {
+                    val lp = LinearLayout.LayoutParams(
+                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                    ).also { it.marginStart = 16 }
+                    layoutParams = lp
+                    text = model.displayName
+                    textSize = 14f
+                    setTextColor(if (isActive) 0xFF1B8C5E.toInt() else 0xFF333333.toInt())
+                    if (isActive) setTypeface(null, android.graphics.Typeface.BOLD)
+                }
+                row.addView(nameView)
+
+                // "ACTIVE" badge
+                if (isActive) {
+                    val badge = TextView(this).apply {
+                        text = "ACTIVE"
+                        textSize = 10f
+                        setTextColor(0xFF1B8C5E.toInt())
+                        setPadding(14, 4, 14, 4)
+                        try {
+                            background = ContextCompat.getDrawable(
+                                this@MainActivity, R.drawable.badge_recommended
+                            )
+                        } catch (_: Exception) {}
+                    }
+                    row.addView(badge)
+                }
+
+                row.setOnClickListener {
+                    if (!isActive) {
+                        localModelRunner.switchModel(model)
+                        Toast.makeText(
+                            this, "Switched to ${model.displayName}", Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    dialog.dismiss()
+                }
+
+                container.addView(row)
+            }
         }
 
         dialog.show()
