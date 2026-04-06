@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.nehuatl.llamacpp.LlamaHelper
 
 /**
@@ -29,6 +31,7 @@ class GgufModelEngine(
 ) {
     private val tag = "GgufEngine[${model.displayName}]"
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val inferenceMutex = Mutex()
 
     private val eventFlow = MutableSharedFlow<LlamaHelper.LLMEvent>(
         replay = 0,
@@ -59,39 +62,49 @@ class GgufModelEngine(
      */
     suspend fun load(modelPath: String): String {
         val result = CompletableDeferred<String>()
+        Log.d(tag, "Attempting to load model from: $modelPath")
 
         // 1. Subscribe to events BEFORE calling load() to avoid the race.
         val monitorJob = scope.launch {
-            eventFlow.collect { event ->
-                when (event) {
-                    is LlamaHelper.LLMEvent.Loaded -> {
-                        Log.i(tag, "LLMEvent.Loaded received for $modelPath")
-                        isLoaded = true
-                        if (!result.isCompleted) result.complete("OK")
+            try {
+                eventFlow.collect { event ->
+                    when (event) {
+                        is LlamaHelper.LLMEvent.Loaded -> {
+                            Log.i(tag, "LLMEvent.Loaded received for $modelPath")
+                            isLoaded = true
+                            if (!result.isCompleted) result.complete("OK")
+                        }
+                        is LlamaHelper.LLMEvent.Error -> {
+                            Log.e(tag, "LLMEvent.Error during load: ${event.message}")
+                            if (!result.isCompleted) result.complete(event.message)
+                        }
+                        else -> {}
                     }
-                    is LlamaHelper.LLMEvent.Error -> {
-                        Log.e(tag, "LLMEvent.Error during load: ${event.message}")
-                        if (!result.isCompleted) result.complete(event.message)
-                    }
-                    else -> {}
                 }
+            } catch (e: Exception) {
+                Log.e(tag, "Monitor job error", e)
             }
         }
 
         // 2. Call helper.load() — the native library is loaded here.
-        //    Any synchronous exception means the native .so couldn't load.
         try {
+            // Using a conservative context length for large/reasoning models
+            val modelName = model.displayName.uppercase()
+            val safeContext = if (modelName.contains("DEEPSEEK") || 
+                                 modelName.contains("QWEN") || 
+                                 modelName.contains("PHI")) 512 else 1024
+            
             helper.load(
                 path = modelPath,
-                contextLength = 2048
+                contextLength = safeContext
             ) { contextId ->
-                Log.i(tag, "Load callback: contextId=$contextId")
+                Log.i(tag, "Load callback successful: contextId=$contextId")
                 isLoaded = true
                 if (!result.isCompleted) result.complete("OK")
             }
         } catch (e: Throwable) {
-            val errString = "${e.javaClass.name}: ${e.message}"
-            Log.e(tag, "helper.load() threw synchronously: $errString", e)
+            val errString = "Native load crash: ${e.message}"
+            Log.e(tag, errString, e)
             monitorJob.cancel()
             return errString
         }
@@ -117,77 +130,127 @@ class GgufModelEngine(
 
     // ── Chat templates ────────────────────────────────────────────────────────
 
-    private fun buildPrompt(userText: String): String = when (model) {
-        LocalModel.DEEPSEEK_R1_Q4 -> deepSeekPrompt(userText)
-        LocalModel.DEEPSEEK_R1_Q2 -> deepSeekPrompt(userText)
-        LocalModel.TINY_LLAMA  -> tinyLlamaPrompt(userText)
-        else                    -> userText
+    private fun buildPrompt(userText: String): String {
+        val modelName = model.displayName.uppercase()
+        return when {
+            modelName.contains("DEEPSEEK") -> deepSeekPrompt(userText)
+            modelName.contains("TINYLLAMA") -> tinyLlamaPrompt(userText)
+            modelName.contains("PHI") -> phiPrompt(userText)
+            modelName.contains("QWEN") -> qwenPrompt(userText)
+            else -> userText
+        }
+    }
+
+    private fun phiPrompt(q: String): String {
+        return "<s><|user|>\n${q.trim()}<|end|>\n<|assistant|>\n"
+    }
+
+    private fun qwenPrompt(q: String): String {
+        return "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n" +
+               "<|im_start|>user\n${q.trim()}<|im_end|>\n" +
+               "<|im_start|>assistant\n"
     }
 
     private fun tinyLlamaPrompt(q: String): String {
-        val sysOpen = "\u003c|system|\u003e\n"
-        val eos     = "\u003c/s\u003e\n"
-        val usrOpen = "\u003c|user|\u003e\n"
-        val astOpen = "\u003c|assistant|\u003e\n"
-        return "${sysOpen}You are a helpful, concise assistant.${eos}${usrOpen}${q.trim()}${eos}${astOpen}"
+        // Strict format for TinyLlama: BOS + System + User + Assistant tags
+        return "<s><|system|>\nYou are a helpful assistant.</s>\n<|user|>\n${q.trim()}</s>\n<|assistant|>\n"
     }
 
     private fun deepSeekPrompt(q: String): String {
-        val start = "\u003c|im_start|\u003e"
-        val end   = "\u003c|im_end|\u003e\n"
-        return "${start}system\nYou are a helpful AI assistant.${end}" +
-               "${start}user\n${q.trim()}${end}" +
-               "${start}assistant\n"
+        // Fallback to a simpler prompt format. 
+        // Some mobile ports of llama.cpp crash on complex ChatML tags if not perfectly aligned.
+        return "User: ${q.trim()}\nAssistant:"
     }
 
     // ── Output cleaning ───────────────────────────────────────────────────────
 
     private fun clean(raw: String): String {
         var r = raw
-        r = r.replace(Regex("\u003cthink\u003e.*?\u003c/think\u003e", RegexOption.DOT_MATCHES_ALL), "")
-        listOf(
-            "\u003c/s\u003e",
-            "\u003c|im_end|\u003e",
-            "\u003c|user|\u003e",
-            "\u003c|system|\u003e"
-        ).forEach { tok ->
+        // 1. Remove reasoning blocks for DeepSeek
+        r = r.replace(Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), "")
+
+        // 2. Stop at the first control token or conversational turn
+        val stopTokens = listOf(
+            "</s>",
+            "<|im_end|>",
+            "<|user|>",
+            "<|system|>",
+            "<|assistant|>",
+            "User:",
+            "Assistant:"
+        )
+
+        for (tok in stopTokens) {
             val idx = r.indexOf(tok)
-            if (idx != -1) r = r.substring(0, idx)
+            if (idx != -1) {
+                r = r.substring(0, idx)
+            }
         }
-        r = r.replace(Regex("\n{3,}"), "\n\n").trim()
-        val paras = r.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }
-        return if (paras.size >= 3 && paras.all { it.length <= 80 }) paras.first() else r
+
+        // 3. Final cleanup of whitespace
+        return r.replace(Regex("\n{3,}"), "\n\n").trim()
     }
 
     // ── Inference ─────────────────────────────────────────────────────────────
 
-    suspend fun generate(userPrompt: String): String {
+    suspend fun generate(userPrompt: String): String = inferenceMutex.withLock {
+        if (!isLoaded) return "Error: Model not loaded."
+
+        // Flush any previous state
+        try { helper.stopPrediction() } catch (_: Exception) {}
+
         val prompt = buildPrompt(userPrompt)
+        Log.d(tag, "Sending prompt to native layer:\n$prompt")
+
         val result = CompletableDeferred<String>()
         val sb = StringBuilder()
 
         val collectJob = scope.launch {
-            eventFlow.collect { event ->
-                when (event) {
-                    is LlamaHelper.LLMEvent.Started -> sb.clear()
-                    is LlamaHelper.LLMEvent.Ongoing -> sb.append(event.word)
-                    is LlamaHelper.LLMEvent.Done -> {
-                        helper.stopPrediction()
-                        if (!result.isCompleted) result.complete(clean(sb.toString()))
+            try {
+                eventFlow.collect { event ->
+                    when (event) {
+                        is LlamaHelper.LLMEvent.Started -> {
+                            sb.clear()
+                            Log.d(tag, "Inference started")
+                        }
+                        is LlamaHelper.LLMEvent.Ongoing -> {
+                            sb.append(event.word)
+                            // Truncate if the model starts hallucinating massive irrelevant text
+                            if (sb.length > 2000) {
+                                try { helper.stopPrediction() } catch (_: Exception) {}
+                                if (!result.isCompleted) result.complete(clean(sb.toString()) + "... [Truncated]")
+                            }
+                        }
+                        is LlamaHelper.LLMEvent.Done -> {
+                            Log.d(tag, "Inference completed successfully")
+                            try { helper.stopPrediction() } catch (e: Exception) { Log.e(tag, "stopPrediction failed", e) }
+                            if (!result.isCompleted) result.complete(clean(sb.toString()))
+                        }
+                        is LlamaHelper.LLMEvent.Error -> {
+                            Log.e(tag, "LLMEvent.Error during inference: ${event.message}")
+                            try { helper.stopPrediction() } catch (e: Exception) { Log.e(tag, "stopPrediction failed", e) }
+                            if (!result.isCompleted) result.complete("Error: ${event.message}")
+                        }
+                        else -> {}
                     }
-                    is LlamaHelper.LLMEvent.Error -> {
-                        helper.stopPrediction()
-                        if (!result.isCompleted) result.complete("Error: ${event.message}")
-                    }
-                    else -> {}
                 }
+            } catch (e: Exception) {
+                Log.e(tag, "Event collection exception", e)
+                if (!result.isCompleted) result.complete("Error: ${e.localizedMessage}")
             }
         }
 
-        helper.predict(prompt)
+        try {
+            helper.predict(prompt)
+        } catch (e: Throwable) {
+            Log.e(tag, "helper.predict threw exception", e)
+            collectJob.cancel()
+            return "Native Error: ${e.localizedMessage}"
+        }
 
-        val response = withTimeoutOrNull(120_000L) { result.await() }
-            ?: "Response timed out."
+        val response = withTimeoutOrNull(180_000L) { result.await() }
+            ?: "Response timed out (180s)."
+
         collectJob.cancel()
         return response
     }

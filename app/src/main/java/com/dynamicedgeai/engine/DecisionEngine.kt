@@ -38,10 +38,14 @@ class DecisionEngine {
         }
 
         // 2. RAM Availability (Absolute Thresholds)
-        // Switch to Cloud if Free RAM < 600MB
-        // Recover to Local if Free RAM > 900MB
+        // High RAM Optimization: If free RAM > 2GB, ignore minor thermal/network issues and stay LOCAL
         val freeRam = state.ramAvailable
         
+        if (freeRam > 2048) {
+            lastStrategy = Strategy.LOCAL
+            return StrategyDetail(Strategy.LOCAL, "Plentiful RAM ($freeRam MB): On-Device Priority")
+        }
+
         if (lastStrategy == Strategy.LOCAL) {
             if (freeRam < 600) {
                 if (isNetworkUsable) {
