@@ -16,10 +16,18 @@ enum class LocalModel(
         description = "Google Gemma 2B — lightweight, fast on-device model",
         isRecommended = true
     ),
-    DEEPSEEK_R1(
-        "DeepSeek-R1 1.5B",
+    DEEPSEEK_R1_Q4(
+        "DeepSeek-R1 1.5B Q4",
         "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
         "https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf?download=true",
+        expectedSizeBytes = 1_100_000_000L,
+        description = "DeepSeek-R1 1.5B (GGUF)",
+        isRecommended = false
+    ),
+    DEEPSEEK_R1_Q2(
+        "DeepSeek-R1 1.5B Q2",
+        "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf",
+        "https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf?download=true",
         expectedSizeBytes = 1_100_000_000L,
         description = "DeepSeek-R1 1.5B (GGUF)",
         isRecommended = false

@@ -30,7 +30,6 @@
             android:windowSoftInputMode="adjustResize"
             android:label="Model Manager" />
 
-        <!-- ✅ ADD THIS BLOCK -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

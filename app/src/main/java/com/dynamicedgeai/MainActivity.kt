@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        localModelRunner = LocalModelRunner(this)
+        localModelRunner = LocalModelRunner.getInstance(this)
         messageRouter = MessageRouter(decisionEngine, localModelRunner, cloudModelRunner)
 
         // Initialize UI

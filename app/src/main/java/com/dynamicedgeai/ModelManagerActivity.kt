@@ -37,7 +37,7 @@ class ModelManagerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_model_manager)
 
-        localModelRunner = LocalModelRunner(this)
+        localModelRunner = LocalModelRunner.getInstance(this)
         modelListContainer = findViewById(R.id.modelListContainer)
         txtStorageInfo = findViewById(R.id.txtStorageInfo)
 

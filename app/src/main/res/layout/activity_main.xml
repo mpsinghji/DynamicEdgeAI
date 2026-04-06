@@ -6,7 +6,6 @@
     android:background="#FDFDFD"
     android:fitsSystemWindows="true">
 
-    <!-- Header Area -->
     <RelativeLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
@@ -297,5 +296,3 @@
     </LinearLayout>
 
 </RelativeLayout>
-
-

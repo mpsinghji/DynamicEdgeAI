@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.DynamicEdgeAI" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Main theme colors -->
         <item name="colorPrimary">@color/btn_blue</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/accent_blue</item>
         <item name="colorOnSecondary">@color/white</item>
         <item name="android:statusBarColor">@color/white</item>
         <item name="android:windowLightStatusBar">true</item>
+
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
     </style>
 </resources>

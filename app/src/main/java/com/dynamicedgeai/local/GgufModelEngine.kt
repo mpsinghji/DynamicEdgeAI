@@ -118,7 +118,8 @@ class GgufModelEngine(
     // ── Chat templates ────────────────────────────────────────────────────────
 
     private fun buildPrompt(userText: String): String = when (model) {
-        LocalModel.DEEPSEEK_R1 -> deepSeekPrompt(userText)
+        LocalModel.DEEPSEEK_R1_Q4 -> deepSeekPrompt(userText)
+        LocalModel.DEEPSEEK_R1_Q2 -> deepSeekPrompt(userText)
         LocalModel.TINY_LLAMA  -> tinyLlamaPrompt(userText)
         else                    -> userText
     }

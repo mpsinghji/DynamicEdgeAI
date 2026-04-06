@@ -19,17 +19,27 @@ import kotlin.random.Random
  *  - Gemma 2B (.bin)  -> MediaPipe LlmInference
  *  - TinyLlama (.gguf) / DeepSeek (.gguf) -> GgufModelEngine (llama.cpp)
  */
-class LocalModelRunner(private val context: Context) {
+class LocalModelRunner private constructor(context: Context) {
 
+    private val appContext = context.applicationContext
     private val tag = "LocalModelRunner"
 
     // ── Persistence ───────────────────────────────────────────────────────────
 
     private val prefs: SharedPreferences =
-        context.getSharedPreferences("LocalModelPrefs", Context.MODE_PRIVATE)
+        appContext.getSharedPreferences("LocalModelPrefs", Context.MODE_PRIVATE)
 
     companion object {
         private const val PREF_KEY_MODEL = "selected_model"
+
+        @Volatile
+        private var instance: LocalModelRunner? = null
+
+        fun getInstance(context: Context): LocalModelRunner {
+            return instance ?: synchronized(this) {
+                instance ?: LocalModelRunner(context).also { instance = it }
+            }
+        }
     }
 
     private fun restoreSavedModel(): LocalModel {
@@ -62,9 +72,9 @@ class LocalModelRunner(private val context: Context) {
     fun getModelPath(model: LocalModel): File {
         val adb = File("/data/local/tmp/${model.fileName}")
         if (adb.exists()) return adb
-        val ext = File(context.getExternalFilesDir(null), model.fileName)
+        val ext = File(appContext.getExternalFilesDir(null), model.fileName)
         if (ext.exists()) return ext
-        val int_ = File(context.filesDir, model.fileName)
+        val int_ = File(appContext.filesDir, model.fileName)
         if (int_.exists()) return int_
         return ext   // canonical "expected" path even if absent
     }
@@ -138,11 +148,11 @@ class LocalModelRunner(private val context: Context) {
     private suspend fun initGgufEngine(modelFile: File): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val engine = GgufModelEngine(context.contentResolver, currentModel)
+                val engine = GgufModelEngine(appContext.contentResolver, currentModel)
 
                 val uri = androidx.core.content.FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.fileprovider",
+                    appContext,
+                    "${appContext.packageName}.fileprovider",
                     modelFile
                 )
 
@@ -177,7 +187,7 @@ class LocalModelRunner(private val context: Context) {
                 .setTopK(40)
                 .setRandomSeed(Random.nextInt())
                 .build()
-            llmInference = LlmInference.createFromOptions(context, options)
+            llmInference = LlmInference.createFromOptions(appContext, options)
             isInitialized = true
             Log.i(tag, "MediaPipe engine ready: ${currentModel.displayName}")
             true
