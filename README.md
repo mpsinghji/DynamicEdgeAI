@@ -1,5 +1,28 @@
 # 📱 Dynamic Edge AI
 
+## 📄 Project Information
+
+**Project Title:** Dynamic Edge AI – Adaptive Edge-Cloud AI Inference for Mobile Devices  
+
+**Project Type:** Research Project  
+
+**Team Members**
+
+| Name | Roll Number |
+|-----|-----|
+| Manpreet Singh | 2210991889 |
+| Vaibhav Verma | 2210992492 |
+
+**Department:** Computer Science and Engineering  
+**University:** Chitkara University  
+
+**Current Status:**  
+Prototype Developed and Research Implementation Completed. The system dynamically switches between Edge AI and Cloud AI inference based on device conditions such as RAM availability, thermal state, and network quality.
+
+---
+
+# 📱 Project Description
+
 **Dynamic Edge AI** is an Android research application that intelligently decides where AI inference should run — **on the device (Edge)** or **in the Cloud** — based on real-time device conditions and user privacy preferences.
 
 The system continuously monitors **RAM availability, device thermal state, and network quality**, then dynamically selects the most efficient AI execution strategy. This project explores **adaptive edge computing for mobile AI systems**.
@@ -16,14 +39,18 @@ Users can enable **Privacy Mode**, which forces all AI processing to run locally
 
 ### 🧠 Resource-Aware Decision Engine
 A rule-based decision engine evaluates live telemetry to determine the best execution strategy:
-* RAM availability (RAM ratio)
-* Device thermal state
-* Network quality
-* Cloud latency
+
+- RAM availability (RAM ratio)
+- Device thermal state
+- Network quality
+- Cloud latency
 
 ### 📊 Explainable Decisions
 Each AI response includes a **reason string** explaining why a strategy was selected.
-> **Example:** > **Strategy:** CLOUD  
+
+Example:
+
+> **Strategy:** CLOUD  
 > **Reason:** Device temperature high
 
 ### 💬 Modern Chat Interface
@@ -35,14 +62,20 @@ A clean messaging interface built with **Material Design** provides transparency
 
 The decision-making flow follows a structured pipeline:
 
-**User Message** ↓  
-**Privacy Mode Check** ↓  
-**Decision Engine** (RAM + Thermal + Network)  
-↓  
-**Strategy Selection** ↓  
-**LOCAL LLM** (TinyLlama) | **CLOUD LLM** (Gemini API)  
-↓  
-**AI Response**
+```text
+User Message
+     ↓
+Privacy Mode Check
+     ↓
+Decision Engine (RAM + Thermal + Network)
+     ↓
+Strategy Selection
+     ↓
+LOCAL LLM (TinyLlama) | CLOUD LLM (Gemini API)
+     ↓
+AI Response
+```
+
 
 ---
 
@@ -60,31 +93,36 @@ The decision-making flow follows a structured pipeline:
 
 The Decision Engine dynamically selects execution strategy based on device state.
 
-### Priority Order:
-1.  **Privacy Mode** (Highest)
-2.  **Thermal Safety**
-3.  **RAM Availability**
-4.  **Network Quality** (Lowest)
+### Priority Order
 
-### Example Rules:
-* `Privacy Mode ON` → **LOCAL**
-* `High temperature` → **CLOUD**
-* `RAM ratio < 30%` → **CLOUD**
-* `Network unavailable` → **LOCAL**
-* `Otherwise` → **LOCAL**
+1. **Privacy Mode** (Highest)
+2. **Thermal Safety**
+3. **RAM Availability**
+4. **Network Quality**
 
-### Hysteresis (Stability Logic):
+### Example Rules
+
+- `Privacy Mode ON` → **LOCAL**
+- `High temperature` → **CLOUD**
+- `RAM ratio < 30%` → **CLOUD**
+- `Network unavailable` → **LOCAL**
+- `Otherwise` → **LOCAL**
+
+### Hysteresis (Stability Logic)
+
 To prevent rapid switching ("flapping") between states:
-* Switch to **CLOUD** if RAM < 30%
-* Return to **LOCAL** only if RAM > 40%
+
+- Switch to **CLOUD** if RAM < 30%
+- Return to **LOCAL** only if RAM > 40%
 
 ---
 
 # 📊 Research Motivation
 
 Mobile AI systems face a key challenge known as the **Execution Paradox**:
-* **Edge execution** → privacy + low latency
-* **Cloud execution** → stronger models
+
+- **Edge execution** → privacy + low latency  
+- **Cloud execution** → stronger models  
 
 **Dynamic Edge AI** explores how mobile devices can **adaptively choose the optimal execution location** based on real-time device conditions.
 
@@ -93,5 +131,35 @@ Mobile AI systems face a key challenge known as the **Execution Paradox**:
 # 🛠 Setup & Installation
 
 ### 1. Clone the Repository
+
 ```bash
-git clone [https://github.com/mpsinghji/DynamicEdgeAI.git](https://github.com/mpsinghji/DynamicEdgeAI.git)
+git clone https://github.com/mpsinghji/DynamicEdgeAI.git
+```
+
+### 2. Open in Android Studio
+File → Open → Select the project folder
+
+### 3. Add Gemini API Key
+Create a `local.properties` entry:
+```properties
+GEMINI_API_KEY=your_api_key_here
+```
+
+### 4. Run the Application
+Connect an Android device or emulator and click Run in Android Studio.
+
+## 📂 Repository Structure
+
+```text
+DynamicEdgeAI
+├── README.md
+├── research-paper
+│   └── DynamicEdgeAI_ResearchPaper.pdf
+├── report
+│   └── Project_Report.pdf
+├── presentation
+│   └── Project_PPT.pptx
+└── app
+    └── Android Source Code
+```
+ 

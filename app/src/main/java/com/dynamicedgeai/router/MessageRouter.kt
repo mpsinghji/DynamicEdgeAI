@@ -9,17 +9,23 @@ import com.dynamicedgeai.local.LocalModelRunner
 import com.dynamicedgeai.monitor.DeviceState
 import com.dynamicedgeai.util.ModelStatus
 
+data class ChatMessage(val role: String, val content: String)
+
 class MessageRouter(
     private val decisionEngine: DecisionEngine,
     private val localModelRunner: LocalModelRunner,
     private val cloudModelRunner: CloudModelRunner
 ) {
+    private val history = mutableListOf<ChatMessage>()
+    private val MAX_HISTORY = 6 // Keep last 3 turns (3 user + 3 assistant)
 
     suspend fun routeMessage(
         text: String, 
         isPrivacyModeOn: Boolean, 
         state: DeviceState
     ): RouterResult {
+        // Add user message to history
+        history.add(ChatMessage("user", text))
         
         var strategyDetail = if (isPrivacyModeOn) {
             StrategyDetail(Strategy.LOCAL, "Privacy Mode ON (User override)")
@@ -53,12 +59,25 @@ class MessageRouter(
 
         Log.d("MessageRouter", "Routing with strategy: ${strategyDetail.strategy}")
 
+        // Prepare the prompt from history
         val response = when (strategyDetail.strategy) {
-            Strategy.LOCAL -> localModelRunner.runInference(text)
-            Strategy.CLOUD -> cloudModelRunner.runInference(text)
+            Strategy.LOCAL -> localModelRunner.runInference(history.takeLast(MAX_HISTORY))
+            Strategy.CLOUD -> cloudModelRunner.runInference(text) // Cloud handles its own history or we can add it later
+        }
+
+        // Add assistant response to history
+        history.add(ChatMessage("assistant", response))
+        
+        // Trim history if too long
+        if (history.size > MAX_HISTORY) {
+            repeat(history.size - MAX_HISTORY) { history.removeAt(0) }
         }
 
         return RouterResult(response, strategyDetail)
+    }
+
+    fun clearHistory() {
+        history.clear()
     }
 }
 

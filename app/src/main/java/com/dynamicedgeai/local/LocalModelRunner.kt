@@ -221,8 +221,9 @@ class LocalModelRunner private constructor(context: Context) {
 
     // ── Public inference entry-point ──────────────────────────────────────────
 
-    suspend fun runInference(prompt: String): String = withContext(Dispatchers.Default) {
+    suspend fun runInference(history: List<com.dynamicedgeai.router.ChatMessage>): String = withContext(Dispatchers.Default) {
         val ready = ensureInitialized()
+        val latestPrompt = history.lastOrNull()?.content ?: ""
 
         if (!ready) {
             val errorMsg = "⚠ Model not ready: ${currentModel.displayName}\n" +
@@ -234,10 +235,10 @@ class LocalModelRunner private constructor(context: Context) {
         return@withContext try {
             if (currentModel.isGguf) {
                 // llama.cpp path
-                ggufEngine?.generate(prompt) ?: "GGUF engine not initialized."
+                ggufEngine?.generate(history) ?: "GGUF engine not initialized."
             } else {
                 // MediaPipe path (Gemma 2B)
-                val formatted = applyGemmaTemplate(prompt)
+                val formatted = applyGemmaTemplate(latestPrompt)
                 val raw = llmInference?.generateResponse(formatted)
                     ?: "No response from MediaPipe engine."
                 cleanGemmaResponse(raw)
