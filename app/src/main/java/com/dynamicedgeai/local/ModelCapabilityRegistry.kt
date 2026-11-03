@@ -15,8 +15,6 @@ object ModelCapabilityRegistry {
         LocalModel.TINY_LLAMA to setOf(ModelCapability.TEXT_INPUT),
         LocalModel.GEMMA_4_E4B to setOf(
             ModelCapability.TEXT_INPUT,
-            ModelCapability.IMAGE_INPUT,
-            ModelCapability.MULTIMODAL_INPUT,
             ModelCapability.TOOL_CALLING
         )
     )

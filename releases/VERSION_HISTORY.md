@@ -9,7 +9,7 @@
 **Git Tag:** `v1.1.9`  
 **Build Variant:** `release` (compatible debug-signature for seamless in-place updates)  
 **Release APK Filename:** `DynamicEdgeAI-v1.1.9-release.apk`  
-**Release APK SHA-256:** `79074B689A4DDB776D441E594F48F04470D7CBDD2AFC6582EDB250795D45D4DC`  
+**Release APK SHA-256:** `380FACBA557D1733D14248117D1651C6EBC52FF3DFFB8E988EA204312EDA9B6F`  
 **Signing Certificate SHA-256:** `0940e42a8cbf0746bf7d48358eb0afbf43b77dcf0c4580069867370436893645` (CN=Android Debug)  
 
 ### 🌟 New Features & Enhancements
@@ -24,6 +24,8 @@
 - **Clean Uniform Surface Model Cards:**
   - Replaced colored background rectangles behind model cards with uniform, premium dark surface cards (`@color/app_surface_card`).
   - Retained distinct, elegant icon accent tints (Teal for Gemma 4, Indigo for Qwen, Emerald for Gemma 2B, Amber for TinyLlama) for a modern, cohesive look.
+- **Multimodal Vision Routing Safeguard**:
+  - Corrected `ModelCapabilityRegistry`: Gemma 4 E4B-it is an instruction text model, so image prompts cleanly route to Gemini Vision (or inform the user if forced local) instead of throwing `Vision modality is not enabled`.
 
 ---
 

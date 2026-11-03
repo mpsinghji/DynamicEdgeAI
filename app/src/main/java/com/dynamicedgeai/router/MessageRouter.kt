@@ -60,8 +60,8 @@ class MessageRouter(
 
             if (effectivePrivacy && !localSupportsImage) {
                 return RouterResult(
-                    "⚠️ The selected local model (${localModelRunner.currentModel.displayName}) is text-only and does not support image analysis.\n\n" +
-                            "To analyse images, please switch to Gemma 4 E4B-it (LiteRT-LM) or turn off Privacy Mode to use Gemini 1.5 Flash.",
+                    "⚠️ The selected on-device model (${localModelRunner.currentModel.displayName}) is a text-only language model.\n\n" +
+                            "To analyze images, please set Inference Strategy to CLOUD or OFF (Adaptive) in Settings so Gemini Vision can process your photos.",
                     StrategyDetail(Strategy.LOCAL, "Image input unsupported by ${localModelRunner.currentModel.displayName}")
                 )
             }
