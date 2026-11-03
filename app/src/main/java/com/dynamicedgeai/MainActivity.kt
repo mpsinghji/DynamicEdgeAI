@@ -38,6 +38,7 @@ import com.dynamicedgeai.updater.UpdateState
 import com.dynamicedgeai.util.ApiKeyManager
 import com.dynamicedgeai.util.AppVersion
 import com.dynamicedgeai.util.ModelStatus
+import com.dynamicedgeai.util.ThemeManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
@@ -114,6 +115,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ThemeManager.initTheme(this)
         setContentView(R.layout.activity_main)
 
         localModelRunner = LocalModelRunner.getInstance(this)
@@ -129,11 +131,8 @@ class MainActivity : AppCompatActivity() {
         networkLabel = findViewById(R.id.networkLabel)
         batteryLabel = findViewById(R.id.batteryLabel)
         ramIndicator = findViewById(R.id.ramIndicator)
-        cpuIndicator = findViewById(R.id.cpuIndicator)
         insightModeText = findViewById(R.id.insightModeText)
-        insightsToggle = findViewById(R.id.insightsToggle)
         insightsContainer = findViewById(R.id.insightsContainer)
-        insightsChevron = findViewById(R.id.insightsInfoIcon) 
         privacyModeToggle = findViewById(R.id.privacyModeToggle)
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
@@ -185,37 +184,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Floating Bottom Navigation (Ref: Image 1)
-        findViewById<View>(R.id.tabNavChat)?.setOnClickListener {
-            scrollToBottom()
-        }
-        findViewById<View>(R.id.tabNavModels)?.setOnClickListener {
-            startActivity(Intent(this, ModelManagerActivity::class.java))
-        }
-        findViewById<View>(R.id.tabNavSettings)?.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-
-        // Auto-hide floating bottom navigation when soft keyboard opens
-        val rootLayout = findViewById<View>(R.id.mainRootLayout)
-        val floatingNav = findViewById<View>(R.id.floatingBottomNav)
-        rootLayout?.viewTreeObserver?.addOnGlobalLayoutListener {
-            val r = android.graphics.Rect()
-            rootLayout.getWindowVisibleDisplayFrame(r)
-            val screenHeight = rootLayout.rootView.height
-            val keypadHeight = screenHeight - r.bottom
-            if (keypadHeight > screenHeight * 0.15) {
-                floatingNav?.visibility = View.GONE
-            } else {
-                floatingNav?.visibility = View.VISIBLE
-            }
-        }
-
-        // Default Visible Insights
-        insightsContainer.visibility = View.VISIBLE
-        insightsChevron.rotation = 270f
-
-        insightsToggle.setOnClickListener { toggleInsights() }
         sendButton.setOnClickListener { trySendMessage() }
         menuButton.setOnClickListener { showBottomSheetMenu() }
 
@@ -545,13 +513,6 @@ class MainActivity : AppCompatActivity() {
 
     // ── Message Routing & Generation ──────────────────────────────────────────
 
-    private fun toggleInsights() {
-        val detailPanel = findViewById<View>(R.id.insightsDetailPanel) ?: return
-        isInsightsVisible = !isInsightsVisible
-        detailPanel.visibility = if (isInsightsVisible) View.VISIBLE else View.GONE
-        insightsChevron.animate().rotation(if (isInsightsVisible) 90f else 270f).setDuration(250).start()
-    }
-
     private fun trySendMessage() {
         if (isSending) return
 
@@ -805,7 +766,7 @@ class MainActivity : AppCompatActivity() {
         val executionLayout = view.findViewById<View>(R.id.executionInfo)
         if (detail != null) {
             view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${detail.strategy.name}"
-            val modelName = if (detail.strategy == Strategy.LOCAL) "${localModelRunner.currentModel.displayName} (On-Device)" else "Gemini 1.5 Flash (Cloud)"
+            val modelName = if (detail.strategy == Strategy.LOCAL) "${localModelRunner.currentModel.displayName} (On-Device)" else "Gemini 2.5 Flash (Cloud)"
             view.findViewById<TextView>(R.id.modelUsedText).text = "Model: $modelName"
             view.findViewById<TextView>(R.id.reasonText).text = "Reason: ${detail.reason}"
             view.findViewById<TextView>(R.id.latencyText).text = "Latency: $latency"
@@ -856,17 +817,7 @@ class MainActivity : AppCompatActivity() {
             dialog.dismiss()
         }
 
-        view.findViewById<View>(R.id.menuMemories)?.setOnClickListener {
-            dialog.dismiss()
-            showMemoriesDialog()
-        }
-
         view.findViewById<TextView>(R.id.txtMenuVersion)?.text = "DynamicEdgeAI • ${AppVersion.label}"
-
-        view.findViewById<View>(R.id.menuSettings)?.setOnClickListener {
-            dialog.dismiss()
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
 
         view.findViewById<View>(R.id.btnManageModelsLink)?.setOnClickListener {
             dialog.dismiss()
@@ -964,22 +915,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateUI(state: DeviceState) {
-        val ramFormatted = if (state.ramAvailable > 1024) String.format(Locale.US, "%.1f GB", state.ramAvailable / 1024f) else "${state.ramAvailable} MB"
-        ramLabel.text = "RAM: $ramFormatted"
+        val freeGb = state.ramAvailable / 1024f
+        ramLabel.text = String.format(Locale.US, "%.1f GB free", freeGb)
+
         val ramRatio = if (state.totalRam > 0) state.ramAvailable.toDouble() / state.totalRam else 1.0
-        ramIndicator.setImageResource(when { ramRatio > 0.30 -> R.drawable.ic_check_green; ramRatio > 0.20 -> R.drawable.dot_orange; else -> R.drawable.dot_red })
-        cpuLabel.text = "CPU: ${state.cpuUsage}%"
-        cpuIndicator.setImageResource(when { state.cpuUsage < 40 -> R.drawable.dot_green; state.cpuUsage < 80 -> R.drawable.dot_orange; else -> R.drawable.dot_red })
-        val networkIcon = if (state.networkQuality != NetworkQuality.POOR && state.networkQuality != NetworkQuality.UNKNOWN) "🔄" else "⚠️"
+        ramIndicator.setImageResource(when {
+            ramRatio > 0.30 -> R.drawable.dot_green
+            ramRatio > 0.20 -> R.drawable.dot_orange
+            else -> R.drawable.dot_red
+        })
+
+        cpuLabel.text = "${state.cpuUsage}%"
+
         val networkStr = when(state.networkQuality) {
-            NetworkQuality.EXCELLENT -> "STRONG (85 Mbps)"
-            NetworkQuality.GOOD -> "STRONG (25 Mbps)"
-            NetworkQuality.MODERATE -> "MODERATE (10 Mbps)"
-            NetworkQuality.POOR -> "WEAK (3 Mbps)"
-            else -> "UNKNOWN"
+            NetworkQuality.EXCELLENT -> "Wi-Fi (85 Mbps)"
+            NetworkQuality.GOOD -> "Wi-Fi (25 Mbps)"
+            NetworkQuality.MODERATE -> "Mobile (10 Mbps)"
+            NetworkQuality.POOR -> "Weak (3 Mbps)"
+            else -> "Offline"
         }
-        networkLabel.text = "Network: $networkIcon $networkStr"
-        batteryLabel.text = "Battery: ${state.batteryLevel.toInt()}%"
+        networkLabel.text = networkStr
+
+        val chargingSymbol = if (state.isCharging) " ⚡" else ""
+        batteryLabel.text = "${state.batteryLevel.toInt()}%$chargingSymbol"
+
         val detail = decisionEngine.determineStrategy(state)
         val overrideMode = ApiKeyManager.getInferenceOverride(this)
         val displayStrategy = when {
@@ -988,11 +947,13 @@ class MainActivity : AppCompatActivity() {
             privacyModeToggle.isChecked -> Strategy.LOCAL
             else -> detail.strategy
         }
-        insightModeText.text = displayStrategy.name
+
         if (displayStrategy == Strategy.LOCAL) {
+            insightModeText.text = "LOCAL (EDGE)"
             insightModeText.setBackgroundResource(R.drawable.bg_status_badge_local)
-            insightModeText.setTextColor(ContextCompat.getColor(this, R.color.mode_local))
+            insightModeText.setTextColor(ContextCompat.getColor(this, R.color.status_green))
         } else {
+            insightModeText.text = "CLOUD (GEMINI)"
             insightModeText.setBackgroundResource(R.drawable.bg_status_badge_cloud)
             insightModeText.setTextColor(ContextCompat.getColor(this, R.color.accent_blue))
         }

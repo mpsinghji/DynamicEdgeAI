@@ -128,8 +128,8 @@ class CloudModelRunner(private val context: Context? = null) {
             )
         )
 
-        // Try gemini-1.5-flash (universal GA endpoint) followed by 2.5-flash and 2.0-flash
-        val candidateModels = listOf("gemini-1.5-flash", "gemini-2.5-flash", "gemini-2.0-flash")
+        // Try gemini-2.5-flash endpoint (per configuration) with fallback to gemini-1.5-flash
+        val candidateModels = listOf("gemini-2.5-flash", "gemini-1.5-flash")
         var lastError: Throwable? = null
 
         for (model in candidateModels) {

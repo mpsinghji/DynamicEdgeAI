@@ -14,6 +14,8 @@ import com.dynamicedgeai.updater.AppUpdateManager
 import com.dynamicedgeai.updater.UpdateState
 import com.dynamicedgeai.util.ApiKeyManager
 import com.dynamicedgeai.util.AppVersion
+import com.dynamicedgeai.util.AppThemeMode
+import com.dynamicedgeai.util.ThemeManager
 import com.dynamicedgeai.util.InferenceOverrideMode
 import com.dynamicedgeai.util.PlatformType
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -28,6 +30,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ThemeManager.initTheme(this)
         setContentView(R.layout.activity_settings)
 
         memoryManager = MemoryManager(this)
@@ -42,11 +45,32 @@ class SettingsActivity : AppCompatActivity() {
         platformCardsContainer = findViewById(R.id.platformCardsContainer)
         switchSettingsMemory = findViewById(R.id.switchSettingsMemory)
 
+        setupThemeRadioGroup()
         setupInferenceOverrideRadioGroup()
         setupProviderRadioGroup()
         renderPlatformCards()
         setupMemoryControls()
         setupCheckForUpdatesButton()
+    }
+
+    private fun setupThemeRadioGroup() {
+        val radioGroup = findViewById<RadioGroup>(R.id.radioGroupTheme) ?: return
+        val currentTheme = ThemeManager.getThemeMode(this)
+        when (currentTheme) {
+            AppThemeMode.SYSTEM -> findViewById<RadioButton>(R.id.radioThemeSystem)?.isChecked = true
+            AppThemeMode.DARK -> findViewById<RadioButton>(R.id.radioThemeDark)?.isChecked = true
+            AppThemeMode.LIGHT -> findViewById<RadioButton>(R.id.radioThemeLight)?.isChecked = true
+        }
+
+        radioGroup.setOnCheckedChangeListener { _, checkedId ->
+            val mode = when (checkedId) {
+                R.id.radioThemeDark -> AppThemeMode.DARK
+                R.id.radioThemeLight -> AppThemeMode.LIGHT
+                else -> AppThemeMode.SYSTEM
+            }
+            ThemeManager.setThemeMode(this, mode)
+            Toast.makeText(this, "Theme set to: ${mode.title}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupInferenceOverrideRadioGroup() {

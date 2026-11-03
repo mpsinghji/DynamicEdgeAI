@@ -6,7 +6,7 @@
     android:layout_marginBottom="12dp"
     app:cardCornerRadius="16dp"
     app:cardElevation="2dp"
-    app:cardBackgroundColor="#131924">
+    app:cardBackgroundColor="@color/app_surface_card">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -29,7 +29,7 @@
                 android:text="Model Name"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:textColor="#F1F5F9"
+                android:textColor="@color/app_text_primary"
                 android:singleLine="true"
                 android:ellipsize="end" />
 
@@ -40,7 +40,7 @@
                 android:background="@drawable/badge_recommended"
                 android:text="★ Recommended"
                 android:textSize="10sp"
-                android:textColor="#FBBF24"
+                android:textColor="#D97706"
                 android:textStyle="bold"
                 android:visibility="gone"
                 android:layout_marginStart="8dp" />
@@ -52,7 +52,7 @@
                 android:background="@drawable/badge_status"
                 android:text="● Active"
                 android:textSize="10sp"
-                android:textColor="#4ADE80"
+                android:textColor="#16A34A"
                 android:textStyle="bold"
                 android:visibility="gone"
                 android:layout_marginStart="6dp" />
@@ -66,7 +66,7 @@
             android:layout_marginTop="4dp"
             android:text="Model description"
             android:textSize="12sp"
-            android:textColor="#94A3B8" />
+            android:textColor="@color/app_text_secondary" />
 
         <!-- Row 3: Size + Status -->
         <LinearLayout
@@ -82,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:text="Size: --"
                 android:textSize="11sp"
-                android:textColor="#64748B" />
+                android:textColor="@color/app_text_muted" />
 
             <View
                 android:layout_width="0dp"
@@ -95,7 +95,7 @@
                 android:layout_height="wrap_content"
                 android:text="Not Downloaded"
                 android:textSize="11sp"
-                android:textColor="#64748B" />
+                android:textColor="@color/app_text_muted" />
         </LinearLayout>
 
         <!-- Row 4: Progress bar and real-time speed monitoring (visible during download) -->
@@ -128,7 +128,7 @@
                     android:layout_height="wrap_content"
                     android:text="0 MB / 0 MB"
                     android:textSize="11sp"
-                    android:textColor="#94A3B8" />
+                    android:textColor="@color/app_text_secondary" />
 
                 <View
                     android:layout_width="0dp"
@@ -142,7 +142,7 @@
                     android:text="0%"
                     android:textSize="11sp"
                     android:textStyle="bold"
-                    android:textColor="#38BDF8" />
+                    android:textColor="@color/accent_blue" />
             </LinearLayout>
 
             <LinearLayout
@@ -157,7 +157,7 @@
                     android:layout_height="wrap_content"
                     android:text="Speed: --"
                     android:textSize="10sp"
-                    android:textColor="#38BDF8" />
+                    android:textColor="@color/accent_blue" />
 
                 <View
                     android:layout_width="0dp"
@@ -170,7 +170,7 @@
                     android:layout_height="wrap_content"
                     android:text="Remaining: --"
                     android:textSize="10sp"
-                    android:textColor="#94A3B8" />
+                    android:textColor="@color/app_text_secondary" />
             </LinearLayout>
 
             <TextView
@@ -180,7 +180,7 @@
                 android:layout_marginTop="2dp"
                 android:text="Downloading..."
                 android:textSize="10sp"
-                android:textColor="#64748B" />
+                android:textColor="@color/app_text_muted" />
         </LinearLayout>
 
         <!-- Row 5: Action buttons -->
@@ -208,13 +208,13 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_download"
-                    app:tint="#38BDF8" />
+                    app:tint="@color/accent_blue" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Download"
                     android:textSize="12sp"
-                    android:textColor="#38BDF8"
+                    android:textColor="@color/accent_blue"
                     android:textStyle="bold"
                     android:layout_marginStart="4dp" />
             </LinearLayout>
@@ -227,7 +227,7 @@
                 android:layout_marginStart="8dp"
                 android:src="@drawable/ic_pause"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#94A3B8"
+                app:tint="@color/app_text_secondary"
                 android:visibility="gone"
                 android:contentDescription="Pause" />
 
@@ -239,7 +239,7 @@
                 android:layout_marginStart="8dp"
                 android:src="@drawable/ic_close"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#F87171"
+                app:tint="#DC2626"
                 android:visibility="gone"
                 android:contentDescription="Cancel" />
 
@@ -259,13 +259,13 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_repair"
-                    app:tint="#FBBF24" />
+                    app:tint="#D97706" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Repair"
                     android:textSize="12sp"
-                    android:textColor="#FBBF24"
+                    android:textColor="#D97706"
                     android:textStyle="bold"
                     android:layout_marginStart="4dp" />
             </LinearLayout>
@@ -286,13 +286,13 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_delete"
-                    app:tint="#F87171" />
+                    app:tint="#DC2626" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Uninstall"
                     android:textSize="12sp"
-                    android:textColor="#F87171"
+                    android:textColor="#DC2626"
                     android:textStyle="bold"
                     android:layout_marginStart="4dp" />
             </LinearLayout>
@@ -315,7 +315,7 @@
                     android:layout_height="wrap_content"
                     android:text="Use This"
                     android:textSize="12sp"
-                    android:textColor="#4ADE80"
+                    android:textColor="#16A34A"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>

@@ -16,7 +16,7 @@ enum class PlatformType(
     GEMINI(
         id = "gemini",
         displayName = "Google Gemini",
-        defaultModel = "gemini-1.5-flash",
+        defaultModel = "gemini-2.5-flash",
         keyHint = "AIzaSy...",
         consoleUrl = "https://aistudio.google.com/apikey"
     ),

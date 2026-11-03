@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     app:cardCornerRadius="16dp"
     app:cardElevation="2dp"
-    app:cardBackgroundColor="#131924"
+    app:cardBackgroundColor="@color/app_surface_card"
     android:layout_marginBottom="12dp">
 
     <LinearLayout
@@ -31,7 +31,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Google Gemini"
-                    android:textColor="#F1F5F9"
+                    android:textColor="@color/app_text_primary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
@@ -39,8 +39,8 @@
                     android:id="@+id/txtPlatformModel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Default Model: gemini-1.5-flash"
-                    android:textColor="#94A3B8"
+                    android:text="Default Model: gemini-2.5-flash"
+                    android:textColor="@color/app_text_secondary"
                     android:textSize="11sp" />
             </LinearLayout>
 
@@ -52,7 +52,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:text="Get Key ↗"
-                android:textColor="#38BDF8"
+                android:textColor="@color/accent_blue"
                 android:textSize="11sp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
@@ -64,7 +64,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="● Key Configured"
-            android:textColor="#4ADE80"
+            android:textColor="#16A34A"
             android:textSize="12sp"
             android:layout_marginBottom="12dp" />
 
@@ -81,7 +81,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:text="Clear"
-                android:textColor="#F87171"
+                android:textColor="#DC2626"
                 android:textSize="12sp"
                 android:layout_marginEnd="8dp" />
 

@@ -4,7 +4,7 @@
     android:id="@+id/mainRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dark_bg"
+    android:background="@color/app_bg"
     android:fitsSystemWindows="true">
 
     <!-- Top App Header (Brand + Circular Action Buttons - Zero Overlap) -->
@@ -12,12 +12,12 @@
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/dark_bg"
+        android:background="@color/app_header_bg"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingTop="12dp"
         android:paddingBottom="10dp"
-        android:elevation="4dp">
+        android:elevation="3dp">
 
         <!-- Left Brand & Title -->
         <LinearLayout
@@ -31,8 +31,8 @@
             android:gravity="center_vertical">
 
             <ImageView
-                android:layout_width="34dp"
-                android:layout_height="34dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:src="@drawable/ic_app_logo"
                 android:layout_marginEnd="10dp"/>
 
@@ -45,8 +45,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="DynamicEdgeAI"
-                    android:textColor="#FFFFFF"
-                    android:textSize="20sp"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -55,7 +55,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Edge &amp; Cloud Intelligence"
-                    android:textColor="#94A3B8"
+                    android:textColor="@color/app_text_muted"
                     android:textSize="11sp"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -79,7 +79,7 @@
                 android:layout_height="38dp"
                 android:src="@drawable/ic_history"
                 android:background="@drawable/bg_circular_action_btn"
-                app:tint="#94A3B8"
+                app:tint="@color/app_text_secondary"
                 android:scaleType="fitCenter"
                 android:padding="8dp"
                 android:contentDescription="Chat History"
@@ -92,7 +92,7 @@
                 android:layout_height="38dp"
                 android:src="@drawable/ic_add"
                 android:background="@drawable/bg_circular_action_btn"
-                app:tint="#38BDF8"
+                app:tint="@color/accent_blue"
                 android:scaleType="fitCenter"
                 android:padding="8dp"
                 android:contentDescription="New Chat"
@@ -105,7 +105,7 @@
                 android:layout_height="38dp"
                 android:src="@drawable/ic_settings"
                 android:background="@drawable/bg_circular_action_btn"
-                app:tint="#94A3B8"
+                app:tint="@color/app_text_secondary"
                 android:scaleType="fitCenter"
                 android:padding="8dp"
                 android:contentDescription="Settings" />
@@ -121,17 +121,17 @@
         android:layout_below="@id/header"
         android:layout_marginTop="4dp" />
 
-    <!-- Sleek Status & Telemetry Pill Card (Ref: Image 1 Top Status Card) -->
+    <!-- Permanent System Telemetry & Edge Routing Dashboard (Never Fully Hidden) -->
     <LinearLayout
         android:id="@+id/insightsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/includedUpdateBanner"
         android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
         android:paddingTop="6dp"
-        android:paddingBottom="6dp">
+        android:paddingBottom="4dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -140,25 +140,65 @@
             android:orientation="vertical"
             android:padding="12dp">
 
-            <!-- Summary Bar (Click to toggle detailed telemetry) -->
+            <!-- Telemetry Header: Engine Status & Mode Badge -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp">
+
+                <LinearLayout
+                    android:id="@+id/telemetryHeaderLeft"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true">
+
+                    <!-- Live Pulsing Status Dot -->
+                    <ImageView
+                        android:id="@+id/ramIndicator"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:src="@drawable/dot_green"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="System Telemetry"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_primary" />
+                </LinearLayout>
+
+                <!-- Status Badge (LOCAL / CLOUD) -->
+                <TextView
+                    android:id="@+id/insightModeText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:text="LOCAL"
+                    android:textStyle="bold"
+                    android:textSize="11sp"
+                    android:textColor="#16A34A"
+                    android:background="@drawable/bg_status_badge_local"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp" />
+            </RelativeLayout>
+
+            <!-- 4-Column Diagnostic Grid (Always Visible Live Stats) -->
             <LinearLayout
-                android:id="@+id/insightsToggle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:clickable="true"
-                android:focusable="true">
+                android:baselineAligned="false"
+                android:layout_marginBottom="8dp">
 
-                <!-- Left Glowing Status Dot -->
-                <ImageView
-                    android:id="@+id/ramIndicator"
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
-                    android:src="@drawable/ic_check_green"
-                    android:layout_marginEnd="10dp" />
-
-                <!-- Center Telemetry Info -->
+                <!-- RAM Tile -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -168,142 +208,136 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Dynamic AI Engine"
-                        android:textSize="13sp"
+                        android:text="RAM"
+                        android:textSize="10sp"
                         android:textStyle="bold"
-                        android:textColor="#F1F5F9" />
+                        android:textColor="@color/app_text_muted" />
 
-                    <!-- Quick Telemetry Chips -->
-                    <LinearLayout
+                    <TextView
+                        android:id="@+id/ramLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="2dp"
-                        android:gravity="center_vertical">
-
-                        <TextView
-                            android:id="@+id/ramLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="RAM: --"
-                            android:textSize="11sp"
-                            android:textColor="#94A3B8" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text=" • "
-                            android:textSize="11sp"
-                            android:textColor="#64748B" />
-
-                        <TextView
-                            android:id="@+id/cpuLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="CPU: --"
-                            android:textSize="11sp"
-                            android:textColor="#94A3B8" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text=" • "
-                            android:textSize="11sp"
-                            android:textColor="#64748B" />
-
-                        <TextView
-                            android:id="@+id/networkLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Net: --"
-                            android:textSize="11sp"
-                            android:textColor="#94A3B8" />
-                    </LinearLayout>
+                        android:text="-- GB free"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_primary"
+                        android:layout_marginTop="1dp" />
                 </LinearLayout>
 
-                <!-- Right Pill Badge (LOCAL / CLOUD) -->
-                <TextView
-                    android:id="@+id/insightModeText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="LOCAL"
-                    android:textStyle="bold"
-                    android:textSize="11sp"
-                    android:textColor="#4ADE80"
-                    android:background="@drawable/bg_status_badge_local"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="3dp"
-                    android:paddingBottom="3dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginEnd="6dp" />
-
-                <!-- Chevron Icon -->
-                <ImageView
-                    android:id="@+id/insightsInfoIcon"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:src="@drawable/ic_arrow_back"
-                    android:rotation="270"
-                    app:tint="#64748B" />
-            </LinearLayout>
-
-            <!-- Detailed Telemetry Sub-panel (Collapsible) -->
-            <LinearLayout
-                android:id="@+id/insightsDetailPanel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone"
-                android:layout_marginTop="8dp">
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#1E293B"
-                    android:layout_marginBottom="8dp" />
-
+                <!-- CPU Tile -->
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-                    <ImageView
-                        android:id="@+id/cpuIndicator"
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
-                        android:src="@drawable/dot_green"
-                        android:layout_marginEnd="6dp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="CPU LOAD"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_muted" />
+
+                    <TextView
+                        android:id="@+id/cpuLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--%"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_primary"
+                        android:layout_marginTop="1dp" />
+                </LinearLayout>
+
+                <!-- Network Tile -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="NETWORK"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_muted" />
+
+                    <TextView
+                        android:id="@+id/networkLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_primary"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:layout_marginTop="1dp" />
+                </LinearLayout>
+
+                <!-- Battery Tile -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.9"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="BATTERY"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_muted" />
 
                     <TextView
                         android:id="@+id/batteryLabel"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Battery: --"
-                        android:textSize="11sp"
-                        android:textColor="#94A3B8" />
-
-                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Privacy"
-                        android:textSize="11sp"
-                        android:textColor="#94A3B8"
-                        android:layout_marginEnd="4dp" />
-
-                    <Switch
-                        android:id="@+id/privacyModeToggle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="false" />
+                        android:text="--%"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_primary"
+                        android:layout_marginTop="1dp" />
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Bottom Divider & Privacy Toggle Row -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/app_surface_outline"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Privacy Mode (Force On-Device AI)"
+                    android:textSize="11sp"
+                    android:textColor="@color/app_text_secondary" />
+
+                <Switch
+                    android:id="@+id/privacyModeToggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:checked="false" />
+            </RelativeLayout>
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Chat Area -->
+    <!-- Chat Message Area -->
     <ScrollView
         android:id="@+id/chatScrollView"
         android:layout_width="match_parent"
@@ -311,10 +345,10 @@
         android:layout_below="@id/insightsContainer"
         android:layout_above="@+id/inputArea"
         android:clipToPadding="false"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
 
         <LinearLayout
             android:id="@+id/chatContainer"
@@ -336,21 +370,27 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Thinking..."
-                    android:textColor="#94A3B8"
+                    android:textColor="@color/app_text_secondary"
                     android:textSize="14sp" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
-    <!-- Footer Input with Image Preview and Attachment Support -->
+    <!-- Footer Input Bar (Anchored at Bottom - No Bottom Navigation Bar) -->
     <LinearLayout
         android:id="@+id/inputArea"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/floatingBottomNav"
-        android:background="@color/dark_bg"
+        android:layout_alignParentBottom="true"
+        android:background="@color/app_bg"
         android:orientation="vertical"
         android:elevation="6dp">
+
+        <!-- Top subtle divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/app_surface_outline" />
 
         <!-- Image Attachment Preview Box (visible when image attached) -->
         <LinearLayout
@@ -380,7 +420,7 @@
                 android:layout_marginStart="8dp"
                 android:text="image.jpg"
                 android:textSize="12sp"
-                android:textColor="#F1F5F9"
+                android:textColor="@color/app_text_primary"
                 android:singleLine="true"
                 android:ellipsize="middle" />
 
@@ -400,31 +440,31 @@
             android:layout_height="wrap_content"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="10dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Quick Overflow Menu Button -->
+            <!-- Three horizontal lines Menu Button (Models & RAM) -->
             <ImageButton
                 android:id="@+id/menuButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:layout_marginEnd="6dp"
                 android:background="@drawable/bg_circular_action_btn"
                 android:src="@drawable/ic_menu"
-                app:tint="#94A3B8"
-                android:contentDescription="Menu" />
+                app:tint="@color/app_text_secondary"
+                android:contentDescription="Models &amp; RAM" />
 
             <!-- Gallery Image Picker Button -->
             <ImageButton
                 android:id="@+id/btnAttachImage"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/bg_circular_action_btn"
                 android:src="@drawable/ic_image"
-                app:tint="#94A3B8"
+                app:tint="@color/app_text_secondary"
                 android:contentDescription="Attach Image" />
 
             <!-- Capsule Text Input -->
@@ -438,8 +478,8 @@
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:textSize="14sp"
-                android:textColor="#F1F5F9"
-                android:textColorHint="#64748B"
+                android:textColor="@color/app_text_primary"
+                android:textColorHint="@color/app_text_muted"
                 android:inputType="textLongMessage" />
 
             <!-- Circular Electric Blue Send Button -->
@@ -453,105 +493,6 @@
                 android:src="@drawable/ic_send"
                 app:tint="@color/white"
                 android:contentDescription="Send" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- Modern Floating Pill Bottom Navigation Bar (Ref: Image 1) -->
-    <LinearLayout
-        android:id="@+id/floatingBottomNav"
-        android:layout_width="match_parent"
-        android:layout_height="58dp"
-        android:layout_alignParentBottom="true"
-        android:layout_marginStart="20dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/bg_floating_bottom_bar"
-        android:elevation="12dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingStart="6dp"
-        android:paddingEnd="6dp">
-
-        <!-- Tab 1: Chat (Active) -->
-        <LinearLayout
-            android:id="@+id/tabNavChat"
-            android:layout_width="0dp"
-            android:layout_height="42dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_floating_nav_active"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:clickable="true"
-            android:focusable="true">
-
-            <ImageView
-                android:layout_width="18dp"
-                android:layout_height="18dp"
-                android:src="@drawable/ic_chat"
-                app:tint="#38BDF8"
-                android:layout_marginEnd="6dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Chat"
-                android:textColor="#38BDF8"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Tab 2: Models -->
-        <LinearLayout
-            android:id="@+id/tabNavModels"
-            android:layout_width="0dp"
-            android:layout_height="42dp"
-            android:layout_weight="1"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:clickable="true"
-            android:focusable="true">
-
-            <ImageView
-                android:layout_width="18dp"
-                android:layout_height="18dp"
-                android:src="@drawable/ic_download"
-                app:tint="#94A3B8"
-                android:layout_marginEnd="6dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Models"
-                android:textColor="#94A3B8"
-                android:textSize="13sp" />
-        </LinearLayout>
-
-        <!-- Tab 3: Settings -->
-        <LinearLayout
-            android:id="@+id/tabNavSettings"
-            android:layout_width="0dp"
-            android:layout_height="42dp"
-            android:layout_weight="1"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:clickable="true"
-            android:focusable="true">
-
-            <ImageView
-                android:layout_width="18dp"
-                android:layout_height="18dp"
-                android:src="@drawable/ic_settings"
-                app:tint="#94A3B8"
-                android:layout_marginEnd="6dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Settings"
-                android:textColor="#94A3B8"
-                android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 

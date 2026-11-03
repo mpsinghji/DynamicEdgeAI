@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.dynamicedgeai.local.LocalModel
 import com.dynamicedgeai.local.LocalModelRunner
 import com.dynamicedgeai.util.AppVersion
+import com.dynamicedgeai.util.ThemeManager
 import com.dynamicedgeai.util.DownloadManagerSingleton
 import com.dynamicedgeai.util.ModelStatus
 import java.io.File
@@ -36,6 +37,7 @@ class ModelManagerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ThemeManager.initTheme(this)
         setContentView(R.layout.activity_model_manager)
 
         localModelRunner = LocalModelRunner.getInstance(this)
