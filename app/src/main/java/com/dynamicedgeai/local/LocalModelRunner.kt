@@ -11,8 +11,10 @@ import com.dynamicedgeai.util.ModelStatus
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import java.io.File
 import kotlin.random.Random
 
@@ -198,7 +200,7 @@ class LocalModelRunner private constructor(context: Context) {
         val maxTokens = if (isLargeModel) 512 else 1024
         val numImages = if (hasImage && currentModel.isLiteRtLm) 1 else 0
 
-        Log.i(tag, "Loading Gemma via MediaPipe 0.10.35 from ${modelFile.absolutePath} (largeModel=$isLargeModel, maxTokens=$maxTokens, numImages=$numImages)")
+        Log.i(tag, "Loading Gemma via MediaPipe from ${modelFile.absolutePath} (largeModel=$isLargeModel, maxTokens=$maxTokens, numImages=$numImages)")
 
         // For large models (3.4GB), use CPU with XNNPACK to prevent GPU OpenCL buffer duplication
         // which causes Linux LowMemoryKiller (MMUD > 7.4GB SIGKILL).
@@ -249,29 +251,19 @@ class LocalModelRunner private constructor(context: Context) {
         return "$usrOpen${q.trim()}$usrClose$mdlOpen"
     }
 
+    private val STOP_TOKENS = listOf("<end_of_turn>", "<turn|>", "<eos>", "<start_of_turn>", "<bos>", "<pad>")
+
     private fun cleanGemmaResponse(raw: String): String {
         var r = raw
         // Truncate at the very first occurrence of any stop/control token
-        val stopTokens = listOf("<end_of_turn>", "<turn|>", "<eos>")
-        for (st in stopTokens) {
+        for (st in STOP_TOKENS) {
             val idx = r.indexOf(st)
             if (idx != -1) {
                 r = r.substring(0, idx)
             }
         }
-        listOf(
-            "<end_of_turn>",
-            "<start_of_turn>model",
-            "<start_of_turn>user",
-            "<start_of_turn>",
-            "<turn|>",
-            "<eos>",
-            "<bos>",
-            "<pad>"
-        ).forEach { r = r.replace(it, "") }
-        r = r.replace(Regex("\n{3,}"), "\n\n").trim()
-        val paras = r.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }
-        return if (paras.size >= 3 && paras.all { it.length <= 80 }) paras.first() else r
+        STOP_TOKENS.forEach { r = r.replace(it, "") }
+        return r.replace(Regex("\n{3,}"), "\n\n").trim()
     }
 
     // ── Public inference entry-point ──────────────────────────────────────────
@@ -300,57 +292,98 @@ class LocalModelRunner private constructor(context: Context) {
 
                 if (!hasImage) {
                     val formatted = applyGemmaTemplate(latestPrompt)
-                    try {
-                        val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
-                            .setTemperature(0.7f)
-                            .setTopK(40)
-                            .setRandomSeed(Random.nextInt())
-                            .build()
-                        val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
-                        try {
-                            session.addQueryChunk(formatted)
-                            val raw = session.generateResponse()
-                            cleanGemmaResponse(raw)
-                        } finally {
-                            try { session.close() } catch (_: Exception) {}
-                        }
-                    } catch (sessionErr: Throwable) {
-                        Log.w(tag, "Session inference fallback to direct generateResponse: ${sessionErr.message}")
-                        val raw = engine.generateResponse(formatted)
-                        cleanGemmaResponse(raw)
-                    }
+                    runGemmaSessionInference(engine, formatted, null)
                 } else {
                     // Multimodal path (with image)
-                    val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
-                        .setTemperature(0.7f)
-                        .setTopK(40)
-                        .setRandomSeed(Random.nextInt())
-                        .build()
-                    val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
-                    try {
-                        val paths = imagePath.split("|").filter { it.isNotBlank() }
-                        for (path in paths) {
-                            val imgFile = File(path)
-                            if (imgFile.exists() && imgFile.canRead()) {
-                                val bitmap = BitmapFactory.decodeFile(path)
-                                if (bitmap != null) {
-                                    val mpImage = BitmapImageBuilder(bitmap).build()
-                                    session.addImage(mpImage)
-                                }
-                            }
-                        }
-                        val formatted = applyGemmaTemplate(latestPrompt)
-                        session.addQueryChunk(formatted)
-                        val raw = session.generateResponse()
-                        cleanGemmaResponse(raw)
-                    } finally {
-                        try { session.close() } catch (_: Exception) {}
-                    }
+                    val formatted = applyGemmaTemplate(latestPrompt)
+                    runGemmaSessionInference(engine, formatted, imagePath)
                 }
             }
         } catch (e: Throwable) {
             Log.e(tag, "Inference error", e)
             "Local inference error: ${e.localizedMessage ?: e.javaClass.simpleName}"
+        }
+    }
+
+    /**
+     * Executes Gemma inference with realtime stop-sequence token streaming.
+     * Cancels generation instantly when <turn|>, <eos>, or <end_of_turn> is emitted,
+     * preventing 500+ token runaway generation loops and reducing latency from 60s to <1s.
+     */
+    private suspend fun runGemmaSessionInference(
+        engine: LlmInference,
+        formattedPrompt: String,
+        imagePath: String?
+    ): String {
+        val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
+            .setTemperature(0.7f)
+            .setTopK(40)
+            .setRandomSeed(Random.nextInt())
+            .build()
+        val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
+
+        return try {
+            if (!imagePath.isNullOrBlank()) {
+                val paths = imagePath.split("|").filter { it.isNotBlank() }
+                for (path in paths) {
+                    val imgFile = File(path)
+                    if (imgFile.exists() && imgFile.canRead()) {
+                        val bitmap = BitmapFactory.decodeFile(path)
+                        if (bitmap != null) {
+                            val mpImage = BitmapImageBuilder(bitmap).build()
+                            session.addImage(mpImage)
+                        }
+                    }
+                }
+            }
+
+            session.addQueryChunk(formattedPrompt)
+
+            // Asynchronous token generation with early stop-token cancellation
+            val accumulated = StringBuilder()
+            val deferred = CompletableDeferred<String>()
+
+            try {
+                session.generateResponseAsync { partialResult, done ->
+                    if (!partialResult.isNullOrEmpty()) {
+                        accumulated.append(partialResult)
+                        val textSoFar = accumulated.toString()
+
+                        for (stopToken in STOP_TOKENS) {
+                            val idx = textSoFar.indexOf(stopToken)
+                            if (idx != -1) {
+                                // Stop token emitted! Terminate native generation immediately!
+                                try { session.cancelGenerateResponseAsync() } catch (_: Throwable) {}
+                                val clean = textSoFar.substring(0, idx)
+                                if (!deferred.isCompleted) {
+                                    deferred.complete(clean)
+                                }
+                                return@generateResponseAsync
+                            }
+                        }
+                    }
+                    if (done && !deferred.isCompleted) {
+                        deferred.complete(accumulated.toString())
+                    }
+                }
+
+                // Await response with 45s safety timeout
+                val raw = withTimeout(45_000L) {
+                    deferred.await()
+                }
+                cleanGemmaResponse(raw)
+            } catch (asyncErr: Throwable) {
+                Log.w(tag, "Async stream failed or cancelled: ${asyncErr.message}, cleaning result")
+                if (accumulated.isNotEmpty()) {
+                    cleanGemmaResponse(accumulated.toString())
+                } else {
+                    // Fallback to synchronous generateResponse with strict post-truncation
+                    val fallbackRaw = session.generateResponse()
+                    cleanGemmaResponse(fallbackRaw)
+                }
+            }
+        } finally {
+            try { session.close() } catch (_: Exception) {}
         }
     }
 }

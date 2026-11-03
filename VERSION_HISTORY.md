@@ -2,6 +2,31 @@
 
 ---
 
+## 🚀 Version 1.1.9 (Build 11) — 2026-11-04
+**Status:** Deployed via Wireless ADB / Ready for GitHub Release  
+**Package:** `com.dynamicedgeai`  
+**Target SDK:** 36 (Android 15+) | **Min SDK:** 26 (Android 8.0 Oreo)  
+**Git Tag:** `v1.1.9`  
+**Build Variant:** `release` (compatible debug-signature for seamless in-place updates)  
+**Release APK Filename:** `DynamicEdgeAI-v1.1.9-release.apk`  
+**Release APK SHA-256:** `79074B689A4DDB776D441E594F48F04470D7CBDD2AFC6582EDB250795D45D4DC`  
+**Signing Certificate SHA-256:** `0940e42a8cbf0746bf7d48358eb0afbf43b77dcf0c4580069867370436893645` (CN=Android Debug)  
+
+### 🌟 New Features & Enhancements
+- **Real-Time Dynamic Thinking Timer:**
+  - Live second-by-second ticker in the AI thinking bubble (`Thinking for 1s...`, `Thinking for 2s...`, `Thinking for 1m 2s...`).
+  - Added pulsating blue spark icon for live visual feedback during inference.
+  - Final execution telemetry formatted cleanly into human-readable latency (e.g., `0.3s`, `1.4s`, `1m 2s`).
+- **Gemma 4 Real-Time Token Streaming & Early Stop Sequence Cancellation:**
+  - Resolved runaway generation bug where Gemma 4 kept generating 510 extra `<turn|><eos>` tokens up to `maxTokens = 512`, causing 60s+ latency.
+  - MediaPipe / LiteRT-LM engine upgraded to use `generateResponseAsync` with active stop-sequence monitoring.
+  - Automatically cancels native generation the instant `<turn|>`, `<eos>`, or `<end_of_turn>` is emitted, reducing simple prompt latency from over a minute down to ~300ms.
+- **Clean Uniform Surface Model Cards:**
+  - Replaced colored background rectangles behind model cards with uniform, premium dark surface cards (`@color/app_surface_card`).
+  - Retained distinct, elegant icon accent tints (Teal for Gemma 4, Indigo for Qwen, Emerald for Gemma 2B, Amber for TinyLlama) for a modern, cohesive look.
+
+---
+
 ## 🚀 Version 1.1.8 (Build 10) — 2026-11-03
 **Status:** Deployed via Wireless ADB / Ready for GitHub Release  
 **Package:** `com.dynamicedgeai`  

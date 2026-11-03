@@ -9,6 +9,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.InputType
 import android.util.Log
 import android.view.Gravity
@@ -738,7 +740,14 @@ class MainActivity : AppCompatActivity() {
                     overrideMode = ApiKeyManager.getInferenceOverride(this@MainActivity)
                 )
 
-                val latency = "${(System.currentTimeMillis() - startTime) / 1000.0}s"
+                val elapsedMs = System.currentTimeMillis() - startTime
+                val latency = if (elapsedMs < 60_000) {
+                    String.format(java.util.Locale.US, "%.1fs", elapsedMs / 1000.0)
+                } else {
+                    val mins = (elapsedMs / 1000) / 60
+                    val secs = (elapsedMs / 1000) % 60
+                    "${mins}m ${secs}s"
+                }
                 hideThinking()
 
                 // Save AI response to database
@@ -950,14 +959,41 @@ class MainActivity : AppCompatActivity() {
         chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
     }
 
+    private var thinkingStartTime: Long = 0L
+    private val thinkingTimerHandler = Handler(Looper.getMainLooper())
+    private val thinkingTimerRunnable = object : Runnable {
+        override fun run() {
+            val elapsedMs = android.os.SystemClock.elapsedRealtime() - thinkingStartTime
+            val totalSeconds = (elapsedMs / 1000).toInt()
+            val text = if (totalSeconds < 60) {
+                "Thinking for ${totalSeconds}s..."
+            } else {
+                val mins = totalSeconds / 60
+                val secs = totalSeconds % 60
+                "Thinking for ${mins}m ${secs}s..."
+            }
+            thinkingText.text = text
+            thinkingTimerHandler.postDelayed(this, 1000)
+        }
+    }
+
     private fun showThinking() {
+        thinkingStartTime = android.os.SystemClock.elapsedRealtime()
+        thinkingText.text = "Thinking for 1s..."
         thinkingIndicator.visibility = View.VISIBLE
-        val anim = AlphaAnimation(0.3f, 1.0f).apply { duration = 600; repeatMode = Animation.REVERSE; repeatCount = Animation.INFINITE }
+        val anim = AlphaAnimation(0.4f, 1.0f).apply { 
+            duration = 700 
+            repeatMode = Animation.REVERSE 
+            repeatCount = Animation.INFINITE 
+        }
         thinkingText.startAnimation(anim)
+        thinkingTimerHandler.removeCallbacks(thinkingTimerRunnable)
+        thinkingTimerHandler.postDelayed(thinkingTimerRunnable, 1000)
         scrollToBottom()
     }
 
     private fun hideThinking() {
+        thinkingTimerHandler.removeCallbacks(thinkingTimerRunnable)
         thinkingText.clearAnimation()
         thinkingIndicator.visibility = View.GONE
     }

@@ -145,23 +145,18 @@ class ModelManagerActivity : AppCompatActivity() {
             ?: (card as? androidx.cardview.widget.CardView)
         val isNight = ThemeManager.isNightMode(this)
 
-        // Morphe-Inspired Deep Tint Palette
-        val cardBg = if (isNight) {
-            when (model) {
-                LocalModel.GEMMA_4_E4B -> android.graphics.Color.parseColor("#10353A") // Teal (Morphe Patches)
-                LocalModel.Qwen -> android.graphics.Color.parseColor("#233B4D")        // Slate Blue (Paresh Patches)
-                LocalModel.GEMMA_2B -> android.graphics.Color.parseColor("#233E18")    // Forest Olive (Heval's Patches)
-                LocalModel.TINY_LLAMA -> android.graphics.Color.parseColor("#4E142B")  // Deep Burgundy (HushGram)
-            }
-        } else {
-            when (model) {
-                LocalModel.GEMMA_4_E4B -> android.graphics.Color.parseColor("#E0F2F1") // Light Teal
-                LocalModel.Qwen -> android.graphics.Color.parseColor("#E1F0FA")        // Light Slate Blue
-                LocalModel.GEMMA_2B -> android.graphics.Color.parseColor("#E8F5E9")    // Light Mint
-                LocalModel.TINY_LLAMA -> android.graphics.Color.parseColor("#FCE4EC")  // Light Rose
-            }
+        // Uniform clean dark surface card background (matching the app's dark theme)
+        cardView?.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.app_surface_card))
+
+        // Avatar icon tint matching model identity
+        val avatarIcon = card.findViewById<ImageView>(R.id.modelAvatarIcon)
+        val iconTint = when (model) {
+            LocalModel.GEMMA_4_E4B -> android.graphics.Color.parseColor("#38BDF8") // Sky Blue
+            LocalModel.Qwen -> android.graphics.Color.parseColor("#818CF8")        // Indigo
+            LocalModel.GEMMA_2B -> android.graphics.Color.parseColor("#34D399")    // Emerald
+            LocalModel.TINY_LLAMA -> android.graphics.Color.parseColor("#FBBF24")  // Amber
         }
-        cardView?.setCardBackgroundColor(cardBg)
+        avatarIcon.setColorFilter(iconTint)
 
         // Model Title & Description
         card.findViewById<TextView>(R.id.txtModelName).text = model.displayName
