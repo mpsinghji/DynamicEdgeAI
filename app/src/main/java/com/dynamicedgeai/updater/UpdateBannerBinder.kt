@@ -37,6 +37,8 @@ class UpdateBannerBinder(
     private val handler = Handler(Looper.getMainLooper())
     private var hideRunnable: Runnable? = null
     private var currentState: UpdateState = UpdateState.Idle
+    private var hasShownInitialCheck = false
+    private var isDismissedOrHidden = false
 
     fun bind() {
         btnDismiss.setOnClickListener {
@@ -66,6 +68,7 @@ class UpdateBannerBinder(
             }
 
             is UpdateState.Checking -> {
+                isDismissedOrHidden = false
                 showBanner()
                 spinner.visibility = View.VISIBLE
                 statusIcon.visibility = View.GONE
@@ -76,6 +79,10 @@ class UpdateBannerBinder(
             }
 
             is UpdateState.UpToDate -> {
+                if (hasShownInitialCheck || isDismissedOrHidden) {
+                    // Do not re-display when returning from other activities (e.g. ModelManager)
+                    return
+                }
                 showBanner()
                 spinner.visibility = View.GONE
                 statusIcon.visibility = View.VISIBLE
@@ -163,6 +170,7 @@ class UpdateBannerBinder(
     }
 
     fun dismissBanner() {
+        isDismissedOrHidden = true
         cancelAutoHide()
         bannerView.animate()
             .alpha(0f)
@@ -177,6 +185,8 @@ class UpdateBannerBinder(
     private fun scheduleAutoHide(delayMs: Long) {
         cancelAutoHide()
         hideRunnable = Runnable {
+            hasShownInitialCheck = true
+            isDismissedOrHidden = true
             dismissBanner()
         }
         handler.postDelayed(hideRunnable!!, delayMs)

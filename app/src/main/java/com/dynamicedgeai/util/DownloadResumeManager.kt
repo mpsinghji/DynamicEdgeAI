@@ -6,10 +6,12 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.dynamicedgeai.local.LocalModel
+import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -70,6 +72,10 @@ class DownloadResumeManager(private val context: Context) {
     private var lastUiUpdate = 0L
     private val UI_THROTTLE_MS = 800L
 
+    // Active HTTP Call reference to safely abort dead sockets on network switch
+    @Volatile
+    private var activeCall: Call? = null
+
     // Connectivity monitoring for network transitions
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -81,37 +87,57 @@ class DownloadResumeManager(private val context: Context) {
     private fun registerNetworkCallback() {
         try {
             connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            val request = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build()
-
             networkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
-                    if (isWaitingForNetwork.get() && !isPaused.get() && !isCancelled.get()) {
-                        Log.i(tag, "Network restored. Resuming active download...")
-                        isWaitingForNetwork.set(false)
-                        val model = currentModel
-                        val dest = destinationFile
-                        val lis = listener
-                        if (model != null && dest != null && lis != null) {
-                            startDownload(model, dest, lis, isResuming = true)
-                        }
+                    Log.i(tag, "Default network available: $network")
+                    handleNetworkRestored()
+                }
+
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                    val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    val isValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                    if (hasInternet && isValidated) {
+                        handleNetworkRestored()
                     }
                 }
 
                 override fun onLost(network: Network) {
-                    if (isDownloading()) {
-                        Log.w(tag, "Network lost during download. Suspending transfer...")
+                    Log.w(tag, "Default network lost during download. Suspending transfer...")
+                    if (isDownloading() || (!isPaused.get() && !isCancelled.get() && currentModel != null)) {
                         isWaitingForNetwork.set(true)
+                        try { activeCall?.cancel() } catch (_: Exception) {}
                         mainHandler.post {
                             listener?.onWaitingForNetwork()
                         }
                     }
                 }
             }
-            connectivityManager?.registerNetworkCallback(request, networkCallback!!)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                connectivityManager?.registerDefaultNetworkCallback(networkCallback!!)
+            } else {
+                val request = NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build()
+                connectivityManager?.registerNetworkCallback(request, networkCallback!!)
+            }
         } catch (e: Exception) {
             Log.e(tag, "Failed to register network callback", e)
+        }
+    }
+
+    private fun handleNetworkRestored() {
+        if (isWaitingForNetwork.get() && !isPaused.get() && !isCancelled.get()) {
+            isWaitingForNetwork.set(false)
+            Log.i(tag, "Network validated. Resuming active download...")
+            mainHandler.postDelayed({
+                val model = currentModel
+                val dest = destinationFile
+                val lis = listener
+                if (model != null && dest != null && lis != null && !isPaused.get() && !isCancelled.get()) {
+                    startDownload(model, dest, lis, isResuming = true)
+                }
+            }, 600)
         }
     }
 
@@ -210,7 +236,9 @@ class DownloadResumeManager(private val context: Context) {
                 }
             }
 
-            val response = client.newCall(requestBuilder.build()).execute()
+            val call = client.newCall(requestBuilder.build())
+            activeCall = call
+            val response = call.execute()
             val code = response.code
 
             // Handle HTTP 416 (Range Not Satisfiable)
@@ -329,6 +357,7 @@ class DownloadResumeManager(private val context: Context) {
                 mainHandler.post { downloadListener.onWaitingForNetwork() }
             }
         } finally {
+            activeCall = null
             try { inputStream?.close() } catch (e: Exception) {}
             try { randomAccessFile?.close() } catch (e: Exception) {}
         }
@@ -356,6 +385,7 @@ class DownloadResumeManager(private val context: Context) {
 
     fun pauseDownload() {
         isPaused.set(true)
+        try { activeCall?.cancel() } catch (_: Exception) {}
         val model = currentModel
         if (model != null) {
             saveMetadata(model, currentDownloaded.get(), getPersistedTotalBytes(model), null, null)
@@ -373,6 +403,7 @@ class DownloadResumeManager(private val context: Context) {
         isCancelled.set(true)
         isPaused.set(false)
         isWaitingForNetwork.set(false)
+        try { activeCall?.cancel() } catch (_: Exception) {}
         try {
             downloadFuture?.cancel(true)
             executor.shutdownNow()

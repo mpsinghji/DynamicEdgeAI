@@ -51,6 +51,10 @@ class MainActivity : AppCompatActivity() {
 
     private val tag = "MainActivity"
 
+    companion object {
+        private var hasCheckedUpdatesOnLaunch = false
+    }
+
     private lateinit var batteryMonitor: BatteryMonitor
     private lateinit var thermalMonitor: ThermalMonitor
     private lateinit var networkMonitor: NetworkMonitor
@@ -152,31 +156,37 @@ class MainActivity : AppCompatActivity() {
         // Header Quick Action Buttons
         findViewById<ImageButton>(R.id.btnHeaderNewChat)?.setOnClickListener { startNewConversation() }
         findViewById<ImageButton>(R.id.btnHeaderConversations)?.setOnClickListener { showConversationsDialog() }
+        findViewById<ImageButton>(R.id.btnHeaderSettings)?.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
 
         // In-App Version display from single source of truth
-        findViewById<TextView>(R.id.appSubtitleText)?.text = "Intelligent Adaptive AI System • ${AppVersion.shortLabel}"
+        findViewById<TextView>(R.id.appSubtitleText)?.text = "Edge & Cloud Intelligence • ${AppVersion.shortLabel}"
 
-        // Wire Top Floating Update Banner & Auto-check on Startup
+        // Wire Top Floating Update Banner & Auto-check ONCE on Startup
         val updateBannerView = findViewById<View>(R.id.includedUpdateBanner)
         if (updateBannerView != null) {
             val bannerBinder = UpdateBannerBinder(updateBannerView, this) { state ->
                 when (state) {
                     is UpdateState.UpdateAvailable -> {
-                        showBottomSheetMenu()
+                        lifecycleScope.launch {
+                            AppUpdateManager.getInstance().downloadUpdate(this@MainActivity, state.info)
+                        }
                     }
                     is UpdateState.DownloadCompleted -> {
                         AppUpdateManager.getInstance().installUpdate(this, state.apkFile)
                     }
-                    else -> {
-                        showBottomSheetMenu()
-                    }
+                    else -> {}
                 }
             }
             bannerBinder.bind()
 
-            // Automatically check for updates on startup
-            lifecycleScope.launch {
-                AppUpdateManager.getInstance().checkForUpdate(this@MainActivity)
+            // Automatically check for updates ONCE on app launch
+            if (!hasCheckedUpdatesOnLaunch) {
+                hasCheckedUpdatesOnLaunch = true
+                lifecycleScope.launch {
+                    AppUpdateManager.getInstance().checkForUpdate(this@MainActivity)
+                }
             }
         }
 
@@ -541,63 +551,77 @@ class MainActivity : AppCompatActivity() {
     private fun handleUserMessage(text: String, imagePath: String?) {
         val conv = activeConversation ?: return
         lifecycleScope.launch {
-            // Save user message to database
-            val userMsg = MessageEntity(
-                conversationId = conv.conversationId,
-                role = "user",
-                content = text,
-                attachmentPath = imagePath,
-                attachmentType = if (!imagePath.isNullOrBlank()) "image" else null
-            )
-            conversationRepo.addMessage(userMsg)
+            try {
+                // Save user message to database
+                val userMsg = MessageEntity(
+                    conversationId = conv.conversationId,
+                    role = "user",
+                    content = text,
+                    attachmentPath = imagePath,
+                    attachmentType = if (!imagePath.isNullOrBlank()) "image" else null
+                )
+                conversationRepo.addMessage(userMsg)
 
-            // Auto-rename "New Chat" after first prompt
-            if (conv.title == "New Chat") {
-                val autoTitle = text.take(28).trim().replace("\n", " ") + (if (text.length > 28) "…" else "")
-                conversationRepo.updateConversationTitle(conv.conversationId, autoTitle)
-                findViewById<TextView>(R.id.appTitleText)?.text = autoTitle
+                // Auto-rename "New Chat" after first prompt
+                if (conv.title == "New Chat") {
+                    val autoTitle = text.take(28).trim().replace("\n", " ") + (if (text.length > 28) "…" else "")
+                    conversationRepo.updateConversationTitle(conv.conversationId, autoTitle)
+                    findViewById<TextView>(R.id.appTitleText)?.text = autoTitle
+                }
+
+                // Inspect message for long-term preferences
+                memoryManager.inspectAndExtractMemories(text, conv.conversationId)
+
+                // Render in UI
+                renderUserBubble(userMsg)
+                scrollToBottom()
+
+                // Build context with history and long-term memories
+                val recentMessages = conversationRepo.getMessages(conv.conversationId)
+                val contextHistory = contextBuilder.buildInferenceHistory(recentMessages, conv.summary)
+
+                val startTime = System.currentTimeMillis()
+                showThinking()
+                val state = lastKnownState ?: DeviceState()
+                
+                val result = messageRouter.routeMessage(
+                    text = text,
+                    isPrivacyModeOn = privacyModeToggle.isChecked,
+                    state = state,
+                    imagePath = imagePath,
+                    providedHistory = contextHistory
+                )
+
+                val latency = "${(System.currentTimeMillis() - startTime) / 1000.0}s"
+                hideThinking()
+
+                // Save AI response to database
+                val aiMsg = MessageEntity(
+                    conversationId = conv.conversationId,
+                    role = "assistant",
+                    content = result.response
+                )
+                conversationRepo.addMessage(aiMsg)
+
+                // Render in UI
+                renderAiBubble(aiMsg, result.detail, latency)
+                scrollToBottom()
+            } catch (t: Throwable) {
+                Log.e("MainActivity", "Failed to process message", t)
+                hideThinking()
+                val errorMsg = MessageEntity(
+                    conversationId = conv.conversationId,
+                    role = "assistant",
+                    content = "⚠️ Error processing prompt: ${t.localizedMessage ?: t.javaClass.simpleName}\n\n" +
+                            "If using a local model, verify the model file is complete in Model Manager, or configure Cloud AI in Settings."
+                )
+                conversationRepo.addMessage(errorMsg)
+                renderAiBubble(errorMsg, null, "0s")
+                scrollToBottom()
+            } finally {
+                isSending = false
+                sendButton.isEnabled = true
             }
-
-            // Inspect message for long-term preferences
-            memoryManager.inspectAndExtractMemories(text, conv.conversationId)
-
-            // Render in UI
-            renderUserBubble(userMsg)
-            scrollToBottom()
-
-            // Build context with history and long-term memories
-            val recentMessages = conversationRepo.getMessages(conv.conversationId)
-            val contextHistory = contextBuilder.buildInferenceHistory(recentMessages, conv.summary)
-
-            val startTime = System.currentTimeMillis()
-            showThinking()
-            val state = lastKnownState ?: DeviceState()
-            
-            val result = messageRouter.routeMessage(
-                text = text,
-                isPrivacyModeOn = privacyModeToggle.isChecked,
-                state = state,
-                imagePath = imagePath,
-                providedHistory = contextHistory
-            )
-
-            val latency = "${(System.currentTimeMillis() - startTime) / 1000.0}s"
-            hideThinking()
-
-            // Save AI response to database
-            val aiMsg = MessageEntity(
-                conversationId = conv.conversationId,
-                role = "assistant",
-                content = result.response
-            )
-            conversationRepo.addMessage(aiMsg)
-
-            // Render in UI
-            renderAiBubble(aiMsg, result.detail, latency)
-            scrollToBottom()
-
-            isSending = false
-            sendButton.isEnabled = true
         }
     }
 
@@ -632,45 +656,51 @@ class MainActivity : AppCompatActivity() {
     private fun executeMessageEdit(oldMessage: MessageEntity, newContent: String) {
         val conv = activeConversation ?: return
         lifecycleScope.launch {
-            // 1. Update message content in database
-            conversationRepo.updateMessageContent(oldMessage.messageId, newContent)
+            try {
+                // 1. Update message content in database
+                conversationRepo.updateMessageContent(oldMessage.messageId, newContent)
 
-            // 2. Remove all subsequent messages that depended on the old message
-            conversationRepo.deleteMessagesAfter(conv.conversationId, oldMessage.timestamp)
+                // 2. Remove all subsequent messages that depended on the old message
+                conversationRepo.deleteMessagesAfter(conv.conversationId, oldMessage.timestamp)
 
-            // 3. Reload UI bubbles up to the edited message
-            loadMessagesForActiveConversation()
+                // 3. Reload UI bubbles up to the edited message
+                loadMessagesForActiveConversation()
 
-            // 4. Automatically trigger inference for the updated message
-            isSending = true
-            sendButton.isEnabled = false
-            showThinking()
+                // 4. Automatically trigger inference for the updated message
+                isSending = true
+                sendButton.isEnabled = false
+                showThinking()
 
-            val recentMessages = conversationRepo.getMessages(conv.conversationId)
-            val contextHistory = contextBuilder.buildInferenceHistory(recentMessages, conv.summary)
-            val state = lastKnownState ?: DeviceState()
+                val recentMessages = conversationRepo.getMessages(conv.conversationId)
+                val contextHistory = contextBuilder.buildInferenceHistory(recentMessages, conv.summary)
+                val state = lastKnownState ?: DeviceState()
 
-            val result = messageRouter.routeMessage(
-                text = newContent,
-                isPrivacyModeOn = privacyModeToggle.isChecked,
-                state = state,
-                imagePath = oldMessage.attachmentPath,
-                providedHistory = contextHistory
-            )
+                val result = messageRouter.routeMessage(
+                    text = newContent,
+                    isPrivacyModeOn = privacyModeToggle.isChecked,
+                    state = state,
+                    imagePath = oldMessage.attachmentPath,
+                    providedHistory = contextHistory
+                )
 
-            hideThinking()
+                hideThinking()
 
-            val aiMsg = MessageEntity(
-                conversationId = conv.conversationId,
-                role = "assistant",
-                content = result.response
-            )
-            conversationRepo.addMessage(aiMsg)
-            renderAiBubble(aiMsg, result.detail, "Regenerated")
-            scrollToBottom()
-
-            isSending = false
-            sendButton.isEnabled = true
+                val aiMsg = MessageEntity(
+                    conversationId = conv.conversationId,
+                    role = "assistant",
+                    content = result.response
+                )
+                conversationRepo.addMessage(aiMsg)
+                renderAiBubble(aiMsg, result.detail, "Regenerated")
+                scrollToBottom()
+            } catch (t: Throwable) {
+                Log.e("MainActivity", "Failed to regenerate edited message", t)
+                hideThinking()
+                Toast.makeText(this@MainActivity, "Inference error: ${t.localizedMessage}", Toast.LENGTH_LONG).show()
+            } finally {
+                isSending = false
+                sendButton.isEnabled = true
+            }
         }
     }
 
@@ -786,22 +816,14 @@ class MainActivity : AppCompatActivity() {
 
         view.findViewById<TextView>(R.id.txtMenuVersion)?.text = "DynamicEdgeAI • ${AppVersion.label}"
 
-        // Wire GitHub Auto-Updater card
-        val updateCardView = view.findViewById<View>(R.id.bottomSheetUpdateCard)
-        if (updateCardView != null) {
-            val updateCardBinder = UpdateCardBinder(updateCardView, this, this)
-            updateCardBinder.bind()
-
-            view.findViewById<View>(R.id.menuCheckUpdates).setOnClickListener {
-                lifecycleScope.launch {
-                    AppUpdateManager.getInstance().checkForUpdate(this@MainActivity)
-                }
-            }
+        view.findViewById<View>(R.id.menuSettings)?.setOnClickListener {
+            dialog.dismiss()
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        view.findViewById<View>(R.id.menuApiKey)?.setOnClickListener {
+        view.findViewById<View>(R.id.btnManageModelsLink)?.setOnClickListener {
             dialog.dismiss()
-            showApiKeyDialog()
+            startActivity(Intent(this, ModelManagerActivity::class.java))
         }
 
         // List downloaded local models

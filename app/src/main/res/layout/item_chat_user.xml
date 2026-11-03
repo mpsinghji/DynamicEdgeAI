@@ -4,7 +4,10 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="end"
-    android:padding="8dp"
+    android:paddingStart="40dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp"
     android:orientation="vertical">
 
     <LinearLayout
@@ -12,10 +15,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@drawable/bubble_user"
-        android:padding="12dp"
-        android:orientation="vertical"
-        android:clickable="true"
-        android:focusable="true">
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="8dp"
+        android:orientation="vertical">
 
         <ImageView
             android:id="@+id/userAttachedImage"
@@ -25,18 +29,23 @@
             android:layout_marginBottom="8dp"
             android:visibility="gone" />
 
+        <TextView
+            android:id="@+id/messageText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:lineSpacingExtra="2dp"
+            android:textIsSelectable="true" />
+
+        <!-- Bottom bar inside bubble: Timestamp, Copy, Edit -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/messageText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="#444444"
-                android:textSize="14sp"
-                android:textIsSelectable="true" />
+            android:layout_gravity="end"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
 
             <TextView
                 android:id="@+id/timestamp"
@@ -44,38 +53,30 @@
                 android:layout_height="wrap_content"
                 android:textColor="#999999"
                 android:textSize="10sp"
-                android:layout_marginStart="8dp" />
+                android:layout_marginEnd="6dp" />
+
+            <ImageButton
+                android:id="@+id/copyButton"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_copy"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="2dp"
+                app:tint="#9E9E9E"
+                android:scaleType="fitCenter"
+                android:contentDescription="Copy"
+                android:layout_marginEnd="4dp" />
+
+            <ImageButton
+                android:id="@+id/editButton"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_edit"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="2dp"
+                app:tint="#9E9E9E"
+                android:scaleType="fitCenter"
+                android:contentDescription="Edit" />
         </LinearLayout>
-    </LinearLayout>
-
-    <!-- Quick Actions (Copy / Edit) -->
-    <LinearLayout
-        android:id="@+id/userActions"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="2dp"
-        android:visibility="visible">
-
-        <ImageButton
-            android:id="@+id/copyButton"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:src="@drawable/ic_copy"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="4dp"
-            app:tint="#888888"
-            android:scaleType="fitCenter"/>
-
-        <ImageButton
-            android:id="@+id/editButton"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_marginStart="4dp"
-            android:src="@drawable/ic_edit"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="4dp"
-            app:tint="#888888"
-            android:scaleType="fitCenter"/>
     </LinearLayout>
 </LinearLayout>

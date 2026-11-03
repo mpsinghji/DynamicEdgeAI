@@ -11,20 +11,28 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"
-        android:padding="16dp"
-        android:elevation="1dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:elevation="2dp">
 
+        <!-- Left Brand & Title -->
         <LinearLayout
+            android:id="@+id/headerBrand"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:layout_toStartOf="@+id/headerActions"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
             <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:src="@drawable/ic_app_logo"
-                android:layout_marginEnd="8dp"/>
+                android:layout_marginEnd="10dp"/>
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -34,21 +42,27 @@
                     android:id="@+id/appTitleText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Adaptive Edge AI"
-                    android:textColor="#333333"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:text="DynamicEdgeAI"
+                    android:textColor="#222222"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
                 <TextView
                     android:id="@+id/appSubtitleText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Intelligent Adaptive AI System"
-                    android:textColor="#666666"
-                    android:textSize="11sp" />
+                    android:text="Edge &amp; Cloud Intelligence"
+                    android:textColor="#777777"
+                    android:textSize="11sp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Right Quick Action Bar (Never Overlaps) -->
         <LinearLayout
+            android:id="@+id/headerActions"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
@@ -59,68 +73,40 @@
             <!-- New Chat quick button -->
             <ImageButton
                 android:id="@+id/btnHeaderNewChat"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:src="@drawable/ic_add"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 app:tint="#1E88E5"
                 android:scaleType="fitCenter"
-                android:padding="4dp"
+                android:padding="6dp"
                 android:contentDescription="New Chat"
-                android:layout_marginEnd="6dp" />
+                android:layout_marginEnd="2dp" />
 
             <!-- Conversations history quick button -->
             <ImageButton
                 android:id="@+id/btnHeaderConversations"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:src="@drawable/ic_history"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#455A64"
+                app:tint="#546E7A"
                 android:scaleType="fitCenter"
-                android:padding="4dp"
+                android:padding="6dp"
                 android:contentDescription="Chat History"
-                android:layout_marginEnd="10dp" />
+                android:layout_marginEnd="2dp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Privacy"
-                android:textSize="10sp"
-                android:textColor="#666666"
-                android:layout_marginEnd="4dp"/>
-
-            <Switch
-                android:id="@+id/privacyModeToggle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="10dp"
-                android:checked="false" />
-
-            <LinearLayout
-                android:id="@+id/insightsToggle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground">
-                <TextView
-                    android:id="@+id/insightsToggleText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Insights"
-                    android:textSize="12sp"
-                    android:textColor="#666666"
-                    android:layout_marginEnd="4dp"/>
-                <ImageView
-                    android:id="@+id/insightsInfoIcon"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_ai_small"
-                    app:tint="#666666" />
-            </LinearLayout>
+            <!-- Settings quick button -->
+            <ImageButton
+                android:id="@+id/btnHeaderSettings"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_settings"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="#546E7A"
+                android:scaleType="fitCenter"
+                android:padding="6dp"
+                android:contentDescription="Settings" />
         </LinearLayout>
     </RelativeLayout>
 
@@ -156,16 +142,18 @@
                 android:background="@drawable/card_outline"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:padding="8dp">
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Live Telemetry"
+                    android:text="System Telemetry"
                     android:textSize="12sp"
-                    android:textColor="#555555" />
-
-                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+                    android:textStyle="bold"
+                    android:textColor="#455A64" />
 
                 <TextView
                     android:id="@+id/insightModeText"
@@ -173,8 +161,48 @@
                     android:layout_height="wrap_content"
                     android:text="LOCAL"
                     android:textStyle="bold"
-                    android:textSize="12sp"
-                    android:textColor="@color/mode_local" />
+                    android:textSize="11sp"
+                    android:textColor="@color/mode_local"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/badge_recommended"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp" />
+
+                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Privacy"
+                    android:textSize="11sp"
+                    android:textColor="#666666"
+                    android:layout_marginEnd="2dp"/>
+
+                <Switch
+                    android:id="@+id/privacyModeToggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:checked="false" />
+
+                <LinearLayout
+                    android:id="@+id/insightsToggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="2dp">
+
+                    <ImageView
+                        android:id="@+id/insightsInfoIcon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_ai_small"
+                        app:tint="#666666" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout

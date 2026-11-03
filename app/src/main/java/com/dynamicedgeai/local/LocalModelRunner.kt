@@ -174,7 +174,7 @@ class LocalModelRunner private constructor(context: Context) {
                     Log.e(tag, "GGUF engine failed: $result")
                     false
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 diagnosticInfo = "Stage: GGUF Exception\nError: ${e.localizedMessage ?: "Unknown error"}\nSuggestion: Restart the app or check logcat."
                 Log.e(tag, "GGUF engine exception: ${e.localizedMessage}", e)
                 false
@@ -183,6 +183,11 @@ class LocalModelRunner private constructor(context: Context) {
     }
 
     private fun initMediaPipeEngine(modelFile: File): Boolean {
+        if (!modelFile.exists() || modelFile.length() < 1000L) {
+            diagnosticInfo = "Stage: Model File Check\nError: File is missing or incomplete (${modelFile.length()} bytes).\nSuggestion: Re-download the model from the Model Manager."
+            return false
+        }
+
         return try {
             Log.i(tag, "Loading Gemma via MediaPipe/LiteRT 0.10.35 from ${modelFile.absolutePath}")
             
@@ -198,7 +203,7 @@ class LocalModelRunner private constructor(context: Context) {
                 isInitialized = true
                 Log.i(tag, "MediaPipe/LiteRT engine ready with GPU backend: ${currentModel.displayName}")
                 return true
-            } catch (gpuError: Exception) {
+            } catch (gpuError: Throwable) {
                 Log.w(tag, "GPU initialization failed, falling back to CPU: ${gpuError.message}")
             }
 
@@ -213,7 +218,7 @@ class LocalModelRunner private constructor(context: Context) {
             isInitialized = true
             Log.i(tag, "MediaPipe/LiteRT engine ready with CPU fallback: ${currentModel.displayName}")
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             diagnosticInfo = "Stage: LiteRT-LM Engine Initialization\n" +
                     "Error: ${e.localizedMessage ?: "Failed to initialize engine"}\n" +
                     "Suggestion: Verify model file matches ${currentModel.fileSizeLabel} and that phone has at least 4GB free RAM."
@@ -294,9 +299,9 @@ class LocalModelRunner private constructor(context: Context) {
                     session.close()
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(tag, "Inference error", e)
-            "Local inference error: ${e.localizedMessage}"
+            "Local inference error: ${e.localizedMessage ?: e.javaClass.simpleName}"
         }
     }
 }

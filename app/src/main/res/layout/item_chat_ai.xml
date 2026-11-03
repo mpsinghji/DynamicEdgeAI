@@ -4,7 +4,10 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="8dp">
+    android:paddingStart="8dp"
+    android:paddingEnd="40dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
 
     <LinearLayout
         android:id="@+id/aiBubbleContainer"
@@ -12,67 +15,74 @@
         android:layout_height="wrap_content"
         android:background="@drawable/bubble_ai"
         android:orientation="vertical"
-        android:padding="12dp"
-        android:clickable="true"
-        android:focusable="true">
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="8dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
+
             <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
                 android:src="@drawable/ic_ai_small"
+                android:layout_marginTop="2dp"
                 android:layout_marginEnd="8dp" />
+
             <TextView
                 android:id="@+id/messageText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#444444"
+                android:textColor="#222222"
                 android:textSize="14sp"
+                android:lineSpacingExtra="2dp"
                 android:textIsSelectable="true" />
         </LinearLayout>
 
+        <!-- Technical Telemetry & Execution Info -->
         <LinearLayout
             android:id="@+id/executionInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:background="#F4F7F9"
+            android:layout_marginTop="8dp"
+            android:background="#F0F4F8"
             android:orientation="vertical"
             android:padding="8dp">
+
             <TextView
                 android:id="@+id/modeTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textStyle="bold"
-                android:textSize="12sp"
-                android:textColor="#455A64" />
+                android:textSize="11sp"
+                android:textColor="#37474F" />
 
             <TextView
                 android:id="@+id/modelUsedText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:textSize="11sp"
-                android:textColor="#444444" />
+                android:textColor="#455A64" />
 
             <TextView
                 android:id="@+id/reasonText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:textSize="11sp"
-                android:textColor="#666666" />
+                android:textColor="#607D8B" />
 
             <TextView
                 android:id="@+id/latencyText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:textSize="11sp"
-                android:textColor="#444444" />
+                android:textColor="#455A64" />
 
             <TextView
                 android:id="@+id/networkUsedText"
@@ -80,26 +90,27 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textSize="11sp"
-                android:textColor="#444444" />
+                android:textColor="#455A64" />
         </LinearLayout>
-    </LinearLayout>
 
-    <!-- Quick Actions (Copy AI response) -->
-    <LinearLayout
-        android:id="@+id/aiActions"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="2dp"
-        android:visibility="visible">
-        <ImageButton
-            android:id="@+id/copyButton"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:src="@drawable/ic_copy"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="4dp"
-            app:tint="#888888"
-            android:scaleType="fitCenter"/>
+        <!-- Bottom bar inside AI bubble: Copy -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end|center_vertical"
+            android:layout_marginTop="4dp">
+
+            <ImageButton
+                android:id="@+id/copyButton"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_copy"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="2dp"
+                app:tint="#9E9E9E"
+                android:scaleType="fitCenter"
+                android:contentDescription="Copy" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

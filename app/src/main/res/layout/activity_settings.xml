@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F8F9FA"
+    android:fitsSystemWindows="true">
+
+    <!-- Top Toolbar -->
+    <RelativeLayout
+        android:id="@+id/settingsToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/white"
+        android:elevation="2dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/btnSettingsBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="#333333"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/btnSettingsBack"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="8dp"
+            android:text="Settings &amp; Providers"
+            android:textColor="#222222"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </RelativeLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Section 1: Active Cloud Provider -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Active Cloud AI Provider"
+                android:textColor="#1976D2"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select provider used when routing to Cloud AI:"
+                        android:textColor="#666666"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="10dp" />
+
+                    <RadioGroup
+                        android:id="@+id/radioGroupProviders"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <RadioButton
+                            android:id="@+id/radioGemini"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Google Gemini (Gemini 1.5 Flash)"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:paddingVertical="4dp" />
+
+                        <RadioButton
+                            android:id="@+id/radioOpenAI"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="OpenAI (GPT-4o mini)"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:paddingVertical="4dp" />
+
+                        <RadioButton
+                            android:id="@+id/radioGroq"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Groq (Llama 3.3 70B - Ultra Fast)"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:paddingVertical="4dp" />
+
+                        <RadioButton
+                            android:id="@+id/radioOpenRouter"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="OpenRouter (Universal Model Router)"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:paddingVertical="4dp" />
+
+                        <RadioButton
+                            android:id="@+id/radioAnthropic"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Anthropic Claude (Claude 3.5 Haiku)"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:paddingVertical="4dp" />
+                    </RadioGroup>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Section 2: Platform API Keys -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Client-Side API Keys"
+                android:textColor="#1976D2"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All keys are saved 100% locally on your phone. No keys are hardcoded or sent to third-party servers."
+                android:textColor="#777777"
+                android:textSize="11sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Dynamic Platform Cards Container -->
+            <LinearLayout
+                android:id="@+id/platformCardsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Section 3: Privacy & Long-Term Memory -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Privacy &amp; Memory"
+                android:textColor="#1976D2"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_alignParentStart="true"
+                            android:layout_toStartOf="@+id/switchSettingsMemory">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Long-Term Chat Memory"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="#333333" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Extracts preferences and instructions across chats"
+                                android:textSize="11sp"
+                                android:textColor="#888888" />
+                        </LinearLayout>
+
+                        <Switch
+                            android:id="@+id/switchSettingsMemory"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true" />
+                    </RelativeLayout>
+
+                    <Button
+                        android:id="@+id/btnManageAllMemories"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Inspect &amp; Manage Stored Memories"
+                        android:textColor="#1976D2"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Section 4: About & System Version -->
+            <TextView
+                android:id="@+id/txtSettingsAppVersion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="DynamicEdgeAI • v1.1.2 (Build 4)"
+                android:gravity="center"
+                android:textColor="#9E9E9E"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Open Source on GitHub: mpsinghji/DynamicEdgeAI"
+                android:gravity="center"
+                android:textColor="#B0BEC5"
+                android:textSize="11sp"
+                android:layout_marginBottom="32dp" />
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
+

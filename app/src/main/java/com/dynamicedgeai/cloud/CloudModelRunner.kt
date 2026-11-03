@@ -10,7 +10,15 @@ import com.dynamicedgeai.ml.GeminiRequest
 import com.dynamicedgeai.ml.InlineData
 import com.dynamicedgeai.ml.Part
 import com.dynamicedgeai.util.ApiKeyManager
+import com.dynamicedgeai.util.PlatformType
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.HttpException
 import retrofit2.Retrofit
@@ -20,68 +28,185 @@ import java.util.concurrent.TimeUnit
 
 class CloudModelRunner(private val context: Context? = null) {
 
-    private val api: GeminiApi by lazy {
+    private val tag = "CloudModelRunner"
+    private val gson = Gson()
+
+    private val okHttpClient: OkHttpClient by lazy {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
-        
-        val client = OkHttpClient.Builder()
+        OkHttpClient.Builder()
             .addInterceptor(logging)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
             .build()
+    }
 
+    private val geminiApi: GeminiApi by lazy {
         Retrofit.Builder()
             .baseUrl("https://generativelanguage.googleapis.com/")
             .addConverterFactory(GsonConverterFactory.create())
-            .client(client)
+            .client(okHttpClient)
             .build()
             .create(GeminiApi::class.java)
     }
 
-    suspend fun runInference(prompt: String, imagePath: String? = null, overrideApiKey: String? = null): String {
+    suspend fun runInference(
+        prompt: String,
+        imagePath: String? = null,
+        overridePlatform: PlatformType? = null,
+        overrideApiKey: String? = null
+    ): String = withContext(Dispatchers.IO) {
+        val platform = overridePlatform
+            ?: context?.let { ApiKeyManager.getActivePlatform(it) }
+            ?: PlatformType.GEMINI
+
         val apiKey = overrideApiKey?.takeIf { it.isNotBlank() }
-            ?: context?.let { ApiKeyManager.getGeminiApiKey(it) }?.takeIf { it.isNotBlank() }
-            ?: BuildConfig.GEMINI_KEY.takeIf { it.isNotBlank() }
+            ?: context?.let { ApiKeyManager.getApiKey(it, platform) }?.takeIf { it.isNotBlank() }
+            ?: if (platform == PlatformType.GEMINI) BuildConfig.GEMINI_KEY.takeIf { it.isNotBlank() } else null
 
         if (apiKey.isNullOrEmpty()) {
-            return "⚠️ Gemini API Key is not configured.\n\nPlease open the menu (bottom-right) ➔ tap 'API Key' to enter your Gemini API key from Google AI Studio."
+            return@withContext "⚠️ ${platform.displayName} API Key is not configured.\n\n" +
+                    "Please tap the Settings icon (top-right or menu) ➔ ${platform.displayName} to save your client-side API key."
         }
 
-        return try {
-            val parts = mutableListOf<Part>()
-            if (!imagePath.isNullOrBlank()) {
-                val imageFile = File(imagePath)
-                if (imageFile.exists() && imageFile.canRead()) {
-                    val bytes = imageFile.readBytes()
-                    val base64Data = Base64.encodeToString(bytes, Base64.NO_WRAP)
-                    val mime = if (imagePath.endsWith(".png", true)) "image/png" else "image/jpeg"
-                    parts.add(Part(inline_data = InlineData(mime_type = mime, data = base64Data)))
-                }
+        return@withContext try {
+            when (platform) {
+                PlatformType.GEMINI -> runGeminiInference(apiKey, prompt, imagePath)
+                PlatformType.OPENAI -> runOpenAiCompatibleInference(
+                    url = "https://api.openai.com/v1/chat/completions",
+                    apiKey = apiKey,
+                    model = platform.defaultModel,
+                    prompt = prompt
+                )
+                PlatformType.GROQ -> runOpenAiCompatibleInference(
+                    url = "https://api.groq.com/openai/v1/chat/completions",
+                    apiKey = apiKey,
+                    model = platform.defaultModel,
+                    prompt = prompt
+                )
+                PlatformType.OPENROUTER -> runOpenAiCompatibleInference(
+                    url = "https://openrouter.ai/api/v1/chat/completions",
+                    apiKey = apiKey,
+                    model = platform.defaultModel,
+                    prompt = prompt
+                )
+                PlatformType.ANTHROPIC -> runAnthropicInference(apiKey, platform.defaultModel, prompt)
             }
-            parts.add(Part(text = prompt))
+        } catch (t: Throwable) {
+            Log.e(tag, "${platform.displayName} inference failed", t)
+            "Error: ${platform.displayName} request failed (${t.localizedMessage ?: t.javaClass.simpleName})"
+        }
+    }
 
-            val request = GeminiRequest(
-                contents = listOf(
-                    Content(
-                        parts = parts,
-                        role = "user"
-                    )
+    private suspend fun runGeminiInference(apiKey: String, prompt: String, imagePath: String?): String {
+        val parts = mutableListOf<Part>()
+        if (!imagePath.isNullOrBlank()) {
+            val imageFile = File(imagePath)
+            if (imageFile.exists() && imageFile.canRead()) {
+                val bytes = imageFile.readBytes()
+                val base64Data = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                val mime = if (imagePath.endsWith(".png", true)) "image/png" else "image/jpeg"
+                parts.add(Part(inline_data = InlineData(mime_type = mime, data = base64Data)))
+            }
+        }
+        parts.add(Part(text = prompt))
+
+        val request = GeminiRequest(
+            contents = listOf(
+                Content(
+                    parts = parts,
+                    role = "user"
                 )
             )
-            
-            val response = api.generateContent(apiKey, request)
-            response.candidates.firstOrNull()?.content?.parts?.firstOrNull { it.text != null }?.text 
-                ?: "No valid response from Gemini API."
-                
-        } catch (e: HttpException) {
-            val errorBody = e.response()?.errorBody()?.string()
-            Log.e("CloudModelRunner", "Cloud inference failed: HTTP ${e.code()} - $errorBody")
-            "Error: HTTP ${e.code()} - See Logcat for details."
-        } catch (e: Exception) {
-            Log.e("CloudModelRunner", "Cloud inference failed", e)
-            "Error: Cloud processing failed (${e.localizedMessage})"
+        )
+
+        val response = geminiApi.generateContent(apiKey, request)
+        return response.candidates.firstOrNull()?.content?.parts?.firstOrNull { it.text != null }?.text
+            ?: "No valid response received from Gemini API."
+    }
+
+    private fun runOpenAiCompatibleInference(
+        url: String,
+        apiKey: String,
+        model: String,
+        prompt: String
+    ): String {
+        val payload = JsonObject().apply {
+            addProperty("model", model)
+            val messagesArray = com.google.gson.JsonArray().apply {
+                add(JsonObject().apply {
+                    addProperty("role", "user")
+                    addProperty("content", prompt)
+                })
+            }
+            add("messages", messagesArray)
+            addProperty("max_tokens", 1024)
+            addProperty("temperature", 0.7)
         }
+
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val body = payload.toString().toRequestBody(mediaType)
+
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $apiKey")
+            .post(body)
+            .build()
+
+        val response = okHttpClient.newCall(request).execute()
+        val responseBody = response.body?.string() ?: ""
+
+        if (!response.isSuccessful) {
+            throw Exception("HTTP ${response.code}: $responseBody")
+        }
+
+        val json = gson.fromJson(responseBody, JsonObject::class.java)
+        val choices = json.getAsJsonArray("choices")
+        if (choices != null && choices.size() > 0) {
+            val messageObj = choices[0].asJsonObject.getAsJsonObject("message")
+            return messageObj.get("content").asString.trim()
+        }
+        return "No text output returned by model."
+    }
+
+    private fun runAnthropicInference(apiKey: String, model: String, prompt: String): String {
+        val payload = JsonObject().apply {
+            addProperty("model", model)
+            addProperty("max_tokens", 1024)
+            val messagesArray = com.google.gson.JsonArray().apply {
+                add(JsonObject().apply {
+                    addProperty("role", "user")
+                    addProperty("content", prompt)
+                })
+            }
+            add("messages", messagesArray)
+        }
+
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val body = payload.toString().toRequestBody(mediaType)
+
+        val request = Request.Builder()
+            .url("https://api.anthropic.com/v1/messages")
+            .addHeader("x-api-key", apiKey)
+            .addHeader("anthropic-version", "2023-06-01")
+            .addHeader("content-type", "application/json")
+            .post(body)
+            .build()
+
+        val response = okHttpClient.newCall(request).execute()
+        val responseBody = response.body?.string() ?: ""
+
+        if (!response.isSuccessful) {
+            throw Exception("HTTP ${response.code}: $responseBody")
+        }
+
+        val json = gson.fromJson(responseBody, JsonObject::class.java)
+        val contentArray = json.getAsJsonArray("content")
+        if (contentArray != null && contentArray.size() > 0) {
+            return contentArray[0].asJsonObject.get("text").asString.trim()
+        }
+        return "No text output returned by Claude."
     }
 }
