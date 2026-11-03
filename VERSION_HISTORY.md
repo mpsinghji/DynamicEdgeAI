@@ -2,6 +2,27 @@
 
 ---
 
+## 🚀 Version 1.1.3 (Build 5) — 2026-11-03
+**Status:** Staged Locally & Pushed to GitHub / Ready for In-App Auto-Update Test  
+**Package:** `com.dynamicedgeai`  
+**Target SDK:** 36 (Android 15+) | **Min SDK:** 26 (Android 8.0 Oreo)  
+**Git Tag:** `v1.1.3`  
+**Build Variant:** `release` (compatible debug-signature for seamless in-place updates)  
+**Release APK Filename:** `DynamicEdgeAI-v1.1.3-release.apk`  
+**Release APK SHA-256:** `B7328F63E46835B7930743CC642189BA46E968F53B4C0A77DA84102CB286E3E2`  
+**Signing Certificate SHA-256:** `0940e42a8cbf0746bf7d48358eb0afbf43b77dcf0c4580069867370436893645` (CN=Android Debug)  
+**Deployment Status:** Built locally, verified, and tagged for GitHub Release auto-update.
+
+### 🌟 New Features & Enhancements
+- **Google Gemini API Fallback & HTTP 403 Resolution:**
+  - Resolved `HTTP 403` by setting universal stable `gemini-1.5-flash` as primary endpoint in `GeminiApi.kt` and `CloudModelRunner.kt`.
+  - Added multi-model fallback cascade: tests `gemini-1.5-flash`, then `gemini-2.5-flash`, then `gemini-2.0-flash`.
+  - Added rich HTTP error extraction: displays Google's exact JSON error message (e.g. invalid key, missing API enablement) directly in the UI rather than a generic status code.
+- **GitHub Auto-Update Trigger:**
+  - Version incremented to `versionCode = 5` (`v1.1.3`) so the app currently installed on user device (`versionCode = 4`) detects a higher remote version and triggers the self-update flow upon GitHub Release publication.
+
+---
+
 ## 🚀 Version 1.1.2 (Build 4) — 2026-11-03
 **Status:** Staged Locally / Ready for Wireless Device Push & GitHub Release  
 **Package:** `com.dynamicedgeai`  

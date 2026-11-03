@@ -5,7 +5,14 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface GeminiApi {
-    @POST("v1beta/models/gemini-2.5-flash:generateContent")
+    @POST("v1beta/models/{model}:generateContent")
+    suspend fun generateContentWithModel(
+        @retrofit2.http.Path("model") model: String,
+        @Query("key") apiKey: String,
+        @Body request: GeminiRequest
+    ): GeminiResponse
+
+    @POST("v1beta/models/gemini-1.5-flash:generateContent")
     suspend fun generateContent(
         @Query("key") apiKey: String,
         @Body request: GeminiRequest

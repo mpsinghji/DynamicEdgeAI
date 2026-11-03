@@ -96,7 +96,13 @@ class CloudModelRunner(private val context: Context? = null) {
             }
         } catch (t: Throwable) {
             Log.e(tag, "${platform.displayName} inference failed", t)
-            "Error: ${platform.displayName} request failed (${t.localizedMessage ?: t.javaClass.simpleName})"
+            val detailedMsg = if (t is HttpException) {
+                val errBody = try { t.response()?.errorBody()?.string() } catch (_: Exception) { null }
+                if (!errBody.isNullOrBlank()) "HTTP ${t.code()}: $errBody" else "HTTP ${t.code()}"
+            } else {
+                t.localizedMessage ?: t.javaClass.simpleName
+            }
+            "Error: ${platform.displayName} request failed ($detailedMsg)"
         }
     }
 
@@ -122,9 +128,32 @@ class CloudModelRunner(private val context: Context? = null) {
             )
         )
 
-        val response = geminiApi.generateContent(apiKey, request)
-        return response.candidates.firstOrNull()?.content?.parts?.firstOrNull { it.text != null }?.text
-            ?: "No valid response received from Gemini API."
+        // Try gemini-1.5-flash (universal GA endpoint) followed by 2.5-flash and 2.0-flash
+        val candidateModels = listOf("gemini-1.5-flash", "gemini-2.5-flash", "gemini-2.0-flash")
+        var lastError: Throwable? = null
+
+        for (model in candidateModels) {
+            try {
+                val response = geminiApi.generateContentWithModel(model, apiKey, request)
+                val text = response.candidates.firstOrNull()?.content?.parts?.firstOrNull { it.text != null }?.text
+                if (!text.isNullOrBlank()) {
+                    return text
+                }
+            } catch (e: HttpException) {
+                lastError = e
+                Log.w(tag, "Gemini model $model returned HTTP ${e.code()}")
+                if (e.code() == 404 || e.code() == 403) {
+                    continue
+                }
+                throw e
+            } catch (t: Throwable) {
+                lastError = t
+                Log.w(tag, "Gemini model $model error", t)
+            }
+        }
+
+        if (lastError != null) throw lastError
+        return "No valid response received from Gemini API."
     }
 
     private fun runOpenAiCompatibleInference(
