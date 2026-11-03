@@ -9,7 +9,7 @@
 **Git Tag:** `v1.1.3`  
 **Build Variant:** `release` (compatible debug-signature for seamless in-place updates)  
 **Release APK Filename:** `DynamicEdgeAI-v1.1.3-release.apk`  
-**Release APK SHA-256:** `41FFF781B356A6C764D6E6A2D91A0DC8FB6033E4E0D3B7D230C89CB45FCA37AF`  
+**Release APK SHA-256:** `D657FEAFF840D6D824CB9B5D93E774273B08E51649ABB95A2D56912D85016534`  
 **Signing Certificate SHA-256:** `0940e42a8cbf0746bf7d48358eb0afbf43b77dcf0c4580069867370436893645` (CN=Android Debug)  
 **Deployment Status:** Built locally, verified, and tagged for GitHub Release auto-update.
 

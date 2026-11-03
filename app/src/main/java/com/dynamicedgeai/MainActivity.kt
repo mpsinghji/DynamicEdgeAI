@@ -39,6 +39,7 @@ import com.dynamicedgeai.util.ApiKeyManager
 import com.dynamicedgeai.util.AppVersion
 import com.dynamicedgeai.util.ModelStatus
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.io.File
@@ -50,10 +51,6 @@ import java.util.Locale
 class MainActivity : AppCompatActivity() {
 
     private val tag = "MainActivity"
-
-    companion object {
-        private var hasCheckedUpdatesOnLaunch = false
-    }
 
     private lateinit var batteryMonitor: BatteryMonitor
     private lateinit var thermalMonitor: ThermalMonitor
@@ -181,12 +178,10 @@ class MainActivity : AppCompatActivity() {
             }
             bannerBinder.bind()
 
-            // Automatically check for updates ONCE on app launch
-            if (!hasCheckedUpdatesOnLaunch) {
-                hasCheckedUpdatesOnLaunch = true
-                lifecycleScope.launch {
-                    AppUpdateManager.getInstance().checkForUpdate(this@MainActivity)
-                }
+            // Automatically check for updates on app startup
+            lifecycleScope.launch {
+                delay(800)
+                AppUpdateManager.getInstance().checkForUpdate(this@MainActivity)
             }
         }
 
