@@ -1,16 +1,19 @@
 package com.dynamicedgeai.cloud
 
+import android.util.Base64
 import android.util.Log
 import com.dynamicedgeai.BuildConfig
 import com.dynamicedgeai.ml.Content
 import com.dynamicedgeai.ml.GeminiApi
 import com.dynamicedgeai.ml.GeminiRequest
+import com.dynamicedgeai.ml.InlineData
 import com.dynamicedgeai.ml.Part
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 class CloudModelRunner {
@@ -20,12 +23,11 @@ class CloudModelRunner {
             level = HttpLoggingInterceptor.Level.BODY
         }
         
-        // Increased timeouts to handle long AI generations
         val client = OkHttpClient.Builder()
             .addInterceptor(logging)
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
             .build()
 
         Retrofit.Builder()
@@ -36,24 +38,36 @@ class CloudModelRunner {
             .create(GeminiApi::class.java)
     }
 
-    suspend fun runInference(prompt: String): String {
+    suspend fun runInference(prompt: String, imagePath: String? = null): String {
         val apiKey = BuildConfig.GEMINI_KEY
         if (apiKey.isEmpty()) {
             return "Error: API Key is not set in local.properties. Please add GEMINI_API_KEY='YOUR_KEY' to that file."
         }
 
         return try {
+            val parts = mutableListOf<Part>()
+            if (!imagePath.isNullOrBlank()) {
+                val imageFile = File(imagePath)
+                if (imageFile.exists() && imageFile.canRead()) {
+                    val bytes = imageFile.readBytes()
+                    val base64Data = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                    val mime = if (imagePath.endsWith(".png", true)) "image/png" else "image/jpeg"
+                    parts.add(Part(inline_data = InlineData(mime_type = mime, data = base64Data)))
+                }
+            }
+            parts.add(Part(text = prompt))
+
             val request = GeminiRequest(
                 contents = listOf(
                     Content(
-                        parts = listOf(Part(text = prompt)),
+                        parts = parts,
                         role = "user"
                     )
                 )
             )
             
             val response = api.generateContent(apiKey, request)
-            response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text 
+            response.candidates.firstOrNull()?.content?.parts?.firstOrNull { it.text != null }?.text 
                 ?: "No valid response from Gemini API."
                 
         } catch (e: HttpException) {

@@ -15,69 +15,188 @@
         android:layout_marginBottom="16dp"
         android:background="@drawable/handle_bar" />
 
-    <!-- Horizontal Menu Items (Left Aligned) -->
-    <LinearLayout
+    <!-- Scrollable Quick Action Menu Items -->
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingEnd="24dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
-        android:gravity="start">
+        android:scrollbars="none"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
 
         <LinearLayout
-            android:id="@+id/menuModelManager"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="12dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true">
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_download"
-                android:background="@drawable/menu_icon_bg"
-                android:padding="8dp" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Models"
-                android:textSize="11sp"
-                android:textColor="#333333"
-                android:gravity="center" />
-        </LinearLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <LinearLayout
-            android:id="@+id/menuAdjustRam"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="12dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true">
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_edit"
-                android:background="@drawable/menu_icon_bg"
-                android:padding="8dp" />
-            <TextView
+            <!-- New Chat -->
+            <LinearLayout
+                android:id="@+id/menuNewChat"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="RAM"
-                android:textSize="11sp"
-                android:textColor="#333333"
-                android:gravity="center" />
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_add"
+                    android:background="@drawable/menu_icon_bg"
+                    android:padding="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="New Chat"
+                    android:textSize="11sp"
+                    android:textColor="#333333"
+                    android:gravity="center" />
+            </LinearLayout>
+
+            <!-- Conversations History -->
+            <LinearLayout
+                android:id="@+id/menuConversations"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_history"
+                    android:background="@drawable/menu_icon_bg"
+                    android:padding="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Chats"
+                    android:textSize="11sp"
+                    android:textColor="#333333"
+                    android:gravity="center" />
+            </LinearLayout>
+
+            <!-- Long-Term Memory -->
+            <LinearLayout
+                android:id="@+id/menuMemories"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_ai_small"
+                    android:background="@drawable/menu_icon_bg"
+                    android:padding="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Memory"
+                    android:textSize="11sp"
+                    android:textColor="#333333"
+                    android:gravity="center" />
+            </LinearLayout>
+
+            <!-- Models -->
+            <LinearLayout
+                android:id="@+id/menuModelManager"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_download"
+                    android:background="@drawable/menu_icon_bg"
+                    android:padding="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Models"
+                    android:textSize="11sp"
+                    android:textColor="#333333"
+                    android:gravity="center" />
+            </LinearLayout>
+
+            <!-- RAM -->
+            <LinearLayout
+                android:id="@+id/menuAdjustRam"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_edit"
+                    android:background="@drawable/menu_icon_bg"
+                    android:padding="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="RAM"
+                    android:textSize="11sp"
+                    android:textColor="#333333"
+                    android:gravity="center" />
+            </LinearLayout>
+
+            <!-- Software Updates -->
+            <LinearLayout
+                android:id="@+id/menuCheckUpdates"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_download"
+                    android:background="@drawable/menu_icon_bg"
+                    android:padding="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Updates"
+                    android:textSize="11sp"
+                    android:textColor="#333333"
+                    android:gravity="center" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- Embedded Software Update Card -->
+    <include
+        layout="@layout/layout_update_card"
+        android:id="@+id/bottomSheetUpdateCard" />
 
     <!-- Current model info -->
     <LinearLayout
@@ -87,35 +206,47 @@
         android:gravity="center_vertical"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="4dp">
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp">
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1"
-            android:background="#E0E0E0" />
         <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Installed Local Models"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#555555" />
+
+        <TextView
+            android:id="@+id/btnManageModelsLink"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="  ACTIVE MODEL  "
-            android:textSize="10sp"
-            android:textColor="#999999"
-            android:textStyle="bold" />
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1"
-            android:background="#E0E0E0" />
+            android:text="Manage →"
+            android:textSize="12sp"
+            android:textColor="#1E88E5"
+            android:textStyle="bold"
+            android:padding="4dp" />
     </LinearLayout>
 
-    <!-- Downloaded model list — populated dynamically by MainActivity -->
+    <!-- List of downloaded models -->
     <LinearLayout
-        android:id="@+id/modelListContainer"
+        android:id="@+id/menuModelsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="8dp" />
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp" />
+
+    <!-- Version string at the very bottom -->
+    <TextView
+        android:id="@+id/txtMenuVersion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:text="DynamicEdgeAI • v1.1.2"
+        android:textSize="11sp"
+        android:textColor="#AAAAAA" />
 
 </LinearLayout>

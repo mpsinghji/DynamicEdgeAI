@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -83,21 +84,22 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Quick Actions -->
+    <!-- Quick Actions (Copy AI response) -->
     <LinearLayout
         android:id="@+id/aiActions"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="4dp"
-        android:visibility="gone">
+        android:layout_marginTop="2dp"
+        android:visibility="visible">
         <ImageButton
             android:id="@+id/copyButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:src="@drawable/ic_copy"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="6dp"
+            android:padding="4dp"
+            app:tint="#888888"
             android:scaleType="fitCenter"/>
     </LinearLayout>
 </LinearLayout>

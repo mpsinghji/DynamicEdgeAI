@@ -26,15 +26,29 @@
             app:tint="#333333"
             android:contentDescription="Back" />
 
-        <TextView
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:layout_toEndOf="@id/btnBack"
-            android:text="Model Manager"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#333333" />
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Model Manager"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="#333333" />
+
+            <TextView
+                android:id="@+id/txtAppVersionModelManager"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dynamic Edge AI"
+                android:textSize="10sp"
+                android:textColor="#888888" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/txtStorageInfo"
@@ -60,4 +74,5 @@
             android:orientation="vertical"
             android:padding="16dp" />
     </ScrollView>
+
 </LinearLayout>

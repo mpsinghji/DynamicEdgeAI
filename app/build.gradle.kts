@@ -13,8 +13,8 @@ android {
         applicationId = "com.dynamicedgeai"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "1.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GEMINI_KEY", "\"AIzaSyCF7VizsgjqQQG3SFSE3CDw1hzMueFvvsM\"")
@@ -29,6 +29,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -69,8 +70,9 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
-    // MediaPipe GenAI — used only for Gemma 2B (.bin format)
-    implementation("com.google.mediapipe:tasks-genai:0.10.14")
+    // MediaPipe GenAI & Core — updated to 0.10.35 for LiteRT-LM (.litertlm), MPImage, and Gemma 4 support
+    implementation("com.google.mediapipe:tasks-genai:0.10.35")
+    implementation("com.google.mediapipe:tasks-core:0.10.35")
 
     // llamacpp-kotlin (Maven Central) — real llama.cpp bindings for GGUF models
     // Supports DeepSeek-R1, TinyLlama, and any other arm64-v8a GGUF model

@@ -1,10 +1,14 @@
 package com.dynamicedgeai
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.text.InputType
+import android.util.Log
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -12,26 +16,37 @@ import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.view.inputmethod.EditorInfo
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.dynamicedgeai.cloud.CloudModelRunner
+import com.dynamicedgeai.data.*
 import com.dynamicedgeai.engine.DecisionEngine
 import com.dynamicedgeai.engine.Strategy
-import com.dynamicedgeai.local.LocalModelRunner
 import com.dynamicedgeai.local.LocalModel
+import com.dynamicedgeai.local.LocalModelRunner
+import com.dynamicedgeai.local.ModelCapabilityRegistry
 import com.dynamicedgeai.monitor.*
+import com.dynamicedgeai.router.ChatMessage
 import com.dynamicedgeai.router.MessageRouter
+import com.dynamicedgeai.updater.AppUpdateManager
+import com.dynamicedgeai.updater.UpdateCardBinder
+import com.dynamicedgeai.util.AppVersion
 import com.dynamicedgeai.util.ModelStatus
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
+
+    private val tag = "MainActivity"
 
     private lateinit var batteryMonitor: BatteryMonitor
     private lateinit var thermalMonitor: ThermalMonitor
@@ -44,6 +59,13 @@ class MainActivity : AppCompatActivity() {
     private val cloudModelRunner = CloudModelRunner()
     private lateinit var messageRouter: MessageRouter
 
+    // Persistence & Context Architecture
+    private lateinit var conversationRepo: ConversationRepository
+    private lateinit var memoryManager: MemoryManager
+    private lateinit var contextBuilder: ContextBuilder
+    private var activeConversation: ConversationEntity? = null
+
+    // UI Elements
     private lateinit var ramLabel: TextView
     private lateinit var cpuLabel: TextView
     private lateinit var networkLabel: TextView
@@ -57,7 +79,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var insightsChevron: ImageView
     private var isInsightsVisible = true
 
-    private lateinit var privacyModeToggle: android.widget.Switch
+    private lateinit var privacyModeToggle: Switch
     private lateinit var messageInput: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var menuButton: ImageButton
@@ -65,12 +87,26 @@ class MainActivity : AppCompatActivity() {
     private lateinit var chatScrollView: ScrollView
     private lateinit var thinkingIndicator: LinearLayout
     private lateinit var thinkingText: TextView
-    
-    private var lastKnownState: DeviceState? = null
 
-    // Guard: prevents double-send when the IME "Send" key fires both
-    // the EditorAction callback AND a sendButton click simultaneously.
+    // Image Attachment UI
+    private lateinit var btnAttachImage: ImageButton
+    private lateinit var imagePreviewContainer: LinearLayout
+    private lateinit var imgPreviewThumbnail: ImageView
+    private lateinit var txtPreviewFilename: TextView
+    private lateinit var btnRemoveImage: ImageButton
+    private var selectedAttachmentPath: String? = null
+
+    private var lastKnownState: DeviceState? = null
     private var isSending = false
+
+    // Image Picker Result Contract
+    private val imagePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            handleImagePicked(uri)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +115,11 @@ class MainActivity : AppCompatActivity() {
         localModelRunner = LocalModelRunner.getInstance(this)
         messageRouter = MessageRouter(decisionEngine, localModelRunner, cloudModelRunner)
 
-        // Initialize UI
+        conversationRepo = ConversationRepository(this)
+        memoryManager = MemoryManager(this)
+        contextBuilder = ContextBuilder(memoryManager)
+
+        // Initialize UI Elements
         ramLabel = findViewById(R.id.ramLabel)
         cpuLabel = findViewById(R.id.cpuLabel)
         networkLabel = findViewById(R.id.networkLabel)
@@ -99,6 +139,20 @@ class MainActivity : AppCompatActivity() {
         thinkingIndicator = findViewById(R.id.thinkingIndicator)
         thinkingText = findViewById(R.id.thinkingText)
 
+        // Image Attachment UI
+        btnAttachImage = findViewById(R.id.btnAttachImage)
+        imagePreviewContainer = findViewById(R.id.imagePreviewContainer)
+        imgPreviewThumbnail = findViewById(R.id.imgPreviewThumbnail)
+        txtPreviewFilename = findViewById(R.id.txtPreviewFilename)
+        btnRemoveImage = findViewById(R.id.btnRemoveImage)
+
+        // Header Quick Action Buttons
+        findViewById<ImageButton>(R.id.btnHeaderNewChat)?.setOnClickListener { startNewConversation() }
+        findViewById<ImageButton>(R.id.btnHeaderConversations)?.setOnClickListener { showConversationsDialog() }
+
+        // In-App Version display from single source of truth
+        findViewById<TextView>(R.id.appSubtitleText)?.text = "Intelligent Adaptive AI System • ${AppVersion.shortLabel}"
+
         // Default Visible Insights
         insightsContainer.visibility = View.VISIBLE
         insightsChevron.rotation = 0f
@@ -106,6 +160,14 @@ class MainActivity : AppCompatActivity() {
         insightsToggle.setOnClickListener { toggleInsights() }
         sendButton.setOnClickListener { trySendMessage() }
         menuButton.setOnClickListener { showBottomSheetMenu() }
+
+        btnAttachImage.setOnClickListener {
+            imagePickerLauncher.launch("image/*")
+        }
+
+        btnRemoveImage.setOnClickListener {
+            clearSelectedImage()
+        }
 
         messageInput.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_SEND || 
@@ -122,7 +184,242 @@ class MainActivity : AppCompatActivity() {
         ramMonitor = RamMonitor(this)
 
         startResourceMonitoring()
+        loadOrCreateInitialConversation()
     }
+
+    private fun handleImagePicked(uri: Uri) {
+        try {
+            val attachmentsDir = File(filesDir, "attachments").apply { mkdirs() }
+            val destFile = File(attachmentsDir, "img_${System.currentTimeMillis()}.jpg")
+            
+            contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(destFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            if (destFile.exists() && destFile.length() > 0) {
+                selectedAttachmentPath = destFile.absolutePath
+                val bitmap = BitmapFactory.decodeFile(destFile.absolutePath)
+                imgPreviewThumbnail.setImageBitmap(bitmap)
+                txtPreviewFilename.text = destFile.name
+                imagePreviewContainer.visibility = View.VISIBLE
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Failed to copy picked image", e)
+            Toast.makeText(this, "Failed to load selected image", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun clearSelectedImage() {
+        selectedAttachmentPath = null
+        imagePreviewContainer.visibility = View.GONE
+        imgPreviewThumbnail.setImageDrawable(null)
+    }
+
+    // ── Multi-Conversation Architecture ──────────────────────────────────────
+
+    private fun loadOrCreateInitialConversation() {
+        lifecycleScope.launch {
+            val conversations = conversationRepo.getAllConversations()
+            val savedConvId = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+                .getString("last_active_conv_id", null)
+
+            val conv = conversations.firstOrNull { it.conversationId == savedConvId }
+                ?: conversations.firstOrNull()
+                ?: conversationRepo.createConversation("New Chat", localModelRunner.currentModel.name)
+
+            setActiveConversation(conv)
+        }
+    }
+
+    private fun setActiveConversation(conv: ConversationEntity) {
+        activeConversation = conv
+        getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE).edit()
+            .putString("last_active_conv_id", conv.conversationId)
+            .apply()
+
+        findViewById<TextView>(R.id.appTitleText)?.text = if (conv.title != "New Chat") conv.title else "Adaptive Edge AI"
+        loadMessagesForActiveConversation()
+    }
+
+    private fun loadMessagesForActiveConversation() {
+        val convId = activeConversation?.conversationId ?: return
+        lifecycleScope.launch {
+            val messages = conversationRepo.getMessages(convId)
+            chatContainer.removeAllViews()
+            // Re-add thinking indicator
+            chatContainer.addView(thinkingIndicator)
+
+            messages.forEach { msg ->
+                if (msg.role == "user") {
+                    renderUserBubble(msg)
+                } else {
+                    renderAiBubble(msg)
+                }
+            }
+            scrollToBottom()
+        }
+    }
+
+    private fun startNewConversation() {
+        lifecycleScope.launch {
+            val newConv = conversationRepo.createConversation("New Chat", localModelRunner.currentModel.name)
+            setActiveConversation(newConv)
+            clearSelectedImage()
+            messageInput.text.clear()
+            Toast.makeText(this@MainActivity, "Started New Conversation", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showConversationsDialog() {
+        val dialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_conversations, null)
+        val container = view.findViewById<LinearLayout>(R.id.conversationListContainer)
+        val btnNew = view.findViewById<Button>(R.id.btnDialogNewChat)
+        val txtEmpty = view.findViewById<TextView>(R.id.txtEmptyConversations)
+
+        btnNew.setOnClickListener {
+            dialog.dismiss()
+            startNewConversation()
+        }
+
+        lifecycleScope.launch {
+            val list = conversationRepo.getAllConversations()
+            if (list.isEmpty()) {
+                txtEmpty.visibility = View.VISIBLE
+            } else {
+                txtEmpty.visibility = View.GONE
+                list.forEach { conv ->
+                    val row = layoutInflater.inflate(R.layout.item_conversation_row, container, false)
+                    row.findViewById<TextView>(R.id.txtConvTitle).text = conv.title
+                    
+                    val timeFormat = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
+                    row.findViewById<TextView>(R.id.txtConvTime).text = timeFormat.format(Date(conv.updatedAt))
+
+                    val lastMsg = conversationRepo.getLastMessage(conv.conversationId)
+                    row.findViewById<TextView>(R.id.txtConvPreview).text = lastMsg?.content ?: "No messages"
+
+                    if (conv.conversationId == activeConversation?.conversationId) {
+                        row.findViewById<ImageView>(R.id.imgConvIcon).setColorFilter(0xFF1E88E5.toInt())
+                    }
+
+                    row.setOnClickListener {
+                        setActiveConversation(conv)
+                        dialog.dismiss()
+                    }
+
+                    row.findViewById<ImageButton>(R.id.btnRenameConv).setOnClickListener {
+                        showRenameConversationDialog(conv) {
+                            dialog.dismiss()
+                            showConversationsDialog()
+                        }
+                    }
+
+                    row.findViewById<ImageButton>(R.id.btnDeleteConv).setOnClickListener {
+                        showDeleteConversationDialog(conv) {
+                            dialog.dismiss()
+                            showConversationsDialog()
+                        }
+                    }
+
+                    container.addView(row)
+                }
+            }
+        }
+
+        dialog.setContentView(view)
+        dialog.show()
+    }
+
+    private fun showRenameConversationDialog(conv: ConversationEntity, onDone: () -> Unit) {
+        val input = EditText(this).apply {
+            setText(conv.title)
+            setSelection(text.length)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Rename Conversation")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val newTitle = input.text.toString().trim()
+                if (newTitle.isNotBlank()) {
+                    lifecycleScope.launch {
+                        conversationRepo.updateConversationTitle(conv.conversationId, newTitle)
+                        if (conv.conversationId == activeConversation?.conversationId) {
+                            findViewById<TextView>(R.id.appTitleText)?.text = newTitle
+                        }
+                        onDone()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showDeleteConversationDialog(conv: ConversationEntity, onDone: () -> Unit) {
+        AlertDialog.Builder(this)
+            .setTitle("Delete Conversation")
+            .setMessage("Are you sure you want to delete '${conv.title}'? All messages will be permanently removed.")
+            .setPositiveButton("Delete") { _, _ ->
+                lifecycleScope.launch {
+                    conversationRepo.deleteConversation(conv.conversationId)
+                    if (conv.conversationId == activeConversation?.conversationId) {
+                        loadOrCreateInitialConversation()
+                    }
+                    onDone()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // ── Long-Term Memory Inspection Dialog ────────────────────────────────────
+
+    private fun showMemoriesDialog() {
+        val dialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_memories, null)
+        val container = view.findViewById<LinearLayout>(R.id.memoryListContainer)
+        val toggle = view.findViewById<Switch>(R.id.toggleEnableMemory)
+        val txtEmpty = view.findViewById<TextView>(R.id.txtEmptyMemories)
+
+        toggle.isChecked = memoryManager.isMemoryEnabled
+        toggle.setOnCheckedChangeListener { _, isChecked ->
+            memoryManager.isMemoryEnabled = isChecked
+            Toast.makeText(this, if (isChecked) "Memory Enabled" else "Memory Disabled", Toast.LENGTH_SHORT).show()
+        }
+
+        lifecycleScope.launch {
+            val memories = memoryManager.getAllMemories()
+            if (memories.isEmpty()) {
+                txtEmpty.visibility = View.VISIBLE
+            } else {
+                txtEmpty.visibility = View.GONE
+                memories.forEach { mem ->
+                    val row = layoutInflater.inflate(R.layout.item_memory_row, container, false)
+                    row.findViewById<TextView>(R.id.txtMemoryFact).text = mem.keyFact
+                    row.findViewById<TextView>(R.id.txtMemoryCategory).text = mem.category
+                    
+                    val timeFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+                    row.findViewById<TextView>(R.id.txtMemoryDate).text = timeFormat.format(Date(mem.timestamp))
+
+                    row.findViewById<ImageButton>(R.id.btnDeleteMemory).setOnClickListener {
+                        lifecycleScope.launch {
+                            memoryManager.deleteMemory(mem.memoryId)
+                            container.removeView(row)
+                            if (container.childCount == 0) txtEmpty.visibility = View.VISIBLE
+                        }
+                    }
+
+                    container.addView(row)
+                }
+            }
+        }
+
+        dialog.setContentView(view)
+        dialog.show()
+    }
+
+    // ── Message Routing & Generation ──────────────────────────────────────────
 
     private fun toggleInsights() {
         isInsightsVisible = !isInsightsVisible
@@ -131,12 +428,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun trySendMessage() {
-        // Block re-entry: do nothing if we are already waiting for a response.
         if (isSending) return
 
-        val text = messageInput.text.toString()
-        if (text.isNotBlank()) {
-            // Guard: If privacy mode is ON and no local model is available, block
+        val text = messageInput.text.toString().trim()
+        val imagePath = selectedAttachmentPath
+
+        if (text.isNotBlank() || !imagePath.isNullOrBlank()) {
+            val promptText = if (text.isNotBlank()) text else "Analyze this image."
+
+            // Multimodal capability validation
+            if (!imagePath.isNullOrBlank()) {
+                val localSupportsImage = ModelCapabilityRegistry.supportsImage(localModelRunner.currentModel)
+                if (privacyModeToggle.isChecked && !localSupportsImage) {
+                    Toast.makeText(
+                        this,
+                        "${localModelRunner.currentModel.displayName} is text-only. Switch to Gemma 4 E4B-it or disable Privacy Mode to use Cloud vision.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return
+                }
+            }
+
+            // Local model availability validation
             if (privacyModeToggle.isChecked && !localModelRunner.hasAnyModelAvailable()) {
                 Toast.makeText(
                     this,
@@ -146,143 +459,303 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            // Guard: If privacy mode is ON, ensure current model is valid
-            if (privacyModeToggle.isChecked && !localModelRunner.isModelAvailable(localModelRunner.currentModel)) {
-                val available = localModelRunner.getFirstAvailableModel()
-                if (available != null) {
-                    localModelRunner.switchModel(available)
-                    Toast.makeText(this, "Auto-switched to ${available.displayName}", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(
-                        this,
-                        "Current model is corrupted. Download or repair from Models menu.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return
-                }
-            }
-
             isSending = true
-            sendButton.isEnabled = false   // visual feedback: greyed-out while thinking
+            sendButton.isEnabled = false
             messageInput.text.clear()
-            handleUserMessage(text)
+            clearSelectedImage()
+
+            handleUserMessage(promptText, imagePath)
         }
     }
 
-    private fun handleUserMessage(text: String) {
-        addUserBubble(text)
-        scrollToBottom()
+    private fun handleUserMessage(text: String, imagePath: String?) {
+        val conv = activeConversation ?: return
         lifecycleScope.launch {
+            // Save user message to database
+            val userMsg = MessageEntity(
+                conversationId = conv.conversationId,
+                role = "user",
+                content = text,
+                attachmentPath = imagePath,
+                attachmentType = if (!imagePath.isNullOrBlank()) "image" else null
+            )
+            conversationRepo.addMessage(userMsg)
+
+            // Auto-rename "New Chat" after first prompt
+            if (conv.title == "New Chat") {
+                val autoTitle = text.take(28).trim().replace("\n", " ") + (if (text.length > 28) "…" else "")
+                conversationRepo.updateConversationTitle(conv.conversationId, autoTitle)
+                findViewById<TextView>(R.id.appTitleText)?.text = autoTitle
+            }
+
+            // Inspect message for long-term preferences
+            memoryManager.inspectAndExtractMemories(text, conv.conversationId)
+
+            // Render in UI
+            renderUserBubble(userMsg)
+            scrollToBottom()
+
+            // Build context with history and long-term memories
+            val recentMessages = conversationRepo.getMessages(conv.conversationId)
+            val contextHistory = contextBuilder.buildInferenceHistory(recentMessages, conv.summary)
+
             val startTime = System.currentTimeMillis()
             showThinking()
             val state = lastKnownState ?: DeviceState()
-            val result = messageRouter.routeMessage(text, privacyModeToggle.isChecked, state)
+            
+            val result = messageRouter.routeMessage(
+                text = text,
+                isPrivacyModeOn = privacyModeToggle.isChecked,
+                state = state,
+                imagePath = imagePath,
+                providedHistory = contextHistory
+            )
+
             val latency = "${(System.currentTimeMillis() - startTime) / 1000.0}s"
             hideThinking()
-            addAIResponse(result.response, result.detail, latency)
+
+            // Save AI response to database
+            val aiMsg = MessageEntity(
+                conversationId = conv.conversationId,
+                role = "assistant",
+                content = result.response
+            )
+            conversationRepo.addMessage(aiMsg)
+
+            // Render in UI
+            renderAiBubble(aiMsg, result.detail, latency)
             scrollToBottom()
-            // Unlock send now that the response has been delivered
+
             isSending = false
             sendButton.isEnabled = true
         }
     }
 
-    /**
-     * Shows the bottom sheet menu.
-     * - Top icons: Models (open manager) | RAM (adjust)
-     * - Below: Every DOWNLOADED model as a tappable row with active indicator.
-     *          Tapping a non-active model switches to it immediately.
-     */
+    // ── Message Actions (Copy & Edit) ─────────────────────────────────────────
+
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("DynamicEdgeAI Message", text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showEditUserMessageDialog(message: MessageEntity) {
+        val input = EditText(this).apply {
+            setText(message.content)
+            setSelection(text.length)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Edit Message")
+            .setView(input)
+            .setPositiveButton("Save & Regenerate") { _, _ ->
+                val newContent = input.text.toString().trim()
+                if (newContent.isNotBlank() && newContent != message.content) {
+                    executeMessageEdit(message, newContent)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun executeMessageEdit(oldMessage: MessageEntity, newContent: String) {
+        val conv = activeConversation ?: return
+        lifecycleScope.launch {
+            // 1. Update message content in database
+            conversationRepo.updateMessageContent(oldMessage.messageId, newContent)
+
+            // 2. Remove all subsequent messages that depended on the old message
+            conversationRepo.deleteMessagesAfter(conv.conversationId, oldMessage.timestamp)
+
+            // 3. Reload UI bubbles up to the edited message
+            loadMessagesForActiveConversation()
+
+            // 4. Automatically trigger inference for the updated message
+            isSending = true
+            sendButton.isEnabled = false
+            showThinking()
+
+            val recentMessages = conversationRepo.getMessages(conv.conversationId)
+            val contextHistory = contextBuilder.buildInferenceHistory(recentMessages, conv.summary)
+            val state = lastKnownState ?: DeviceState()
+
+            val result = messageRouter.routeMessage(
+                text = newContent,
+                isPrivacyModeOn = privacyModeToggle.isChecked,
+                state = state,
+                imagePath = oldMessage.attachmentPath,
+                providedHistory = contextHistory
+            )
+
+            hideThinking()
+
+            val aiMsg = MessageEntity(
+                conversationId = conv.conversationId,
+                role = "assistant",
+                content = result.response
+            )
+            conversationRepo.addMessage(aiMsg)
+            renderAiBubble(aiMsg, result.detail, "Regenerated")
+            scrollToBottom()
+
+            isSending = false
+            sendButton.isEnabled = true
+        }
+    }
+
+    // ── Bubble Rendering ──────────────────────────────────────────────────────
+
+    private fun renderUserBubble(message: MessageEntity) {
+        val view = LayoutInflater.from(this).inflate(R.layout.item_chat_user, chatContainer, false)
+        view.findViewById<TextView>(R.id.messageText).text = message.content
+        val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
+        view.findViewById<TextView>(R.id.timestamp).text = timeStr
+
+        // Attached image preview in chat
+        val imgView = view.findViewById<ImageView>(R.id.userAttachedImage)
+        if (!message.attachmentPath.isNullOrBlank()) {
+            val file = File(message.attachmentPath)
+            if (file.exists()) {
+                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                imgView.setImageBitmap(bitmap)
+                imgView.visibility = View.VISIBLE
+            }
+        }
+
+        // Copy button
+        view.findViewById<ImageButton>(R.id.copyButton).setOnClickListener {
+            copyToClipboard(message.content)
+        }
+
+        // Edit button
+        view.findViewById<ImageButton>(R.id.editButton).setOnClickListener {
+            showEditUserMessageDialog(message)
+        }
+
+        val index = chatContainer.indexOfChild(thinkingIndicator)
+        chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
+    }
+
+    private fun renderAiBubble(
+        message: MessageEntity,
+        detail: com.dynamicedgeai.engine.StrategyDetail? = null,
+        latency: String = ""
+    ) {
+        val view = LayoutInflater.from(this).inflate(R.layout.item_chat_ai, chatContainer, false)
+        view.findViewById<TextView>(R.id.messageText).text = message.content
+
+        val executionLayout = view.findViewById<View>(R.id.executionInfo)
+        if (detail != null) {
+            view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${detail.strategy.name}"
+            val modelName = if (detail.strategy == Strategy.LOCAL) "${localModelRunner.currentModel.displayName} (On-Device)" else "Gemini 1.5 Flash (Cloud)"
+            view.findViewById<TextView>(R.id.modelUsedText).text = "Model: $modelName"
+            view.findViewById<TextView>(R.id.reasonText).text = "Reason: ${detail.reason}"
+            view.findViewById<TextView>(R.id.latencyText).text = "Latency: $latency"
+            view.findViewById<TextView>(R.id.networkUsedText).text = "Network Used: ${if (detail.strategy == Strategy.CLOUD) "Yes" else "No"}"
+            executionLayout.visibility = View.VISIBLE
+        } else {
+            executionLayout.visibility = View.GONE
+        }
+
+        // Copy plain response text only
+        view.findViewById<ImageButton>(R.id.copyButton).setOnClickListener {
+            copyToClipboard(message.content)
+        }
+
+        val index = chatContainer.indexOfChild(thinkingIndicator)
+        chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
+    }
+
+    private fun showThinking() {
+        thinkingIndicator.visibility = View.VISIBLE
+        val anim = AlphaAnimation(0.3f, 1.0f).apply { duration = 600; repeatMode = Animation.REVERSE; repeatCount = Animation.INFINITE }
+        thinkingText.startAnimation(anim)
+        scrollToBottom()
+    }
+
+    private fun hideThinking() {
+        thinkingText.clearAnimation()
+        thinkingIndicator.visibility = View.GONE
+    }
+
+    private fun scrollToBottom() { 
+        chatScrollView.post { chatScrollView.fullScroll(View.FOCUS_DOWN) } 
+    }
+
+    // ── Bottom Sheet Menu ─────────────────────────────────────────────────────
+
     private fun showBottomSheetMenu() {
         val dialog = BottomSheetDialog(this)
-        val sheetView = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_menu, null)
-        dialog.setContentView(sheetView)
+        val view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_menu, null)
 
-        // ── Top icon buttons ─────────────────────────────────────────────────
-        sheetView.findViewById<View>(R.id.menuModelManager).setOnClickListener {
-            dialog.dismiss()
+        view.findViewById<View>(R.id.menuModelManager).setOnClickListener {
             startActivity(Intent(this, ModelManagerActivity::class.java))
-        }
-        sheetView.findViewById<View>(R.id.menuAdjustRam).setOnClickListener {
             dialog.dismiss()
-            showCustomRamDialog()
         }
 
-        // ── Downloaded model list ────────────────────────────────────────────
-        val container = sheetView.findViewById<LinearLayout>(R.id.modelListContainer)
-        container.removeAllViews()
+        view.findViewById<View>(R.id.menuAdjustRam).setOnClickListener {
+            showCustomRamDialog()
+            dialog.dismiss()
+        }
 
-        val downloadedModels = LocalModel.values().filter { localModelRunner.isModelAvailable(it) }
+        view.findViewById<View>(R.id.menuNewChat)?.setOnClickListener {
+            dialog.dismiss()
+            startNewConversation()
+        }
 
-        if (downloadedModels.isEmpty()) {
-            val hint = TextView(this).apply {
-                text = "No models downloaded yet.\nTap  Models  above to download one."
-                textSize = 13f
-                setTextColor(0xFF999999.toInt())
-                gravity = android.view.Gravity.CENTER
-                setPadding(32, 24, 32, 16)
+        view.findViewById<View>(R.id.menuConversations)?.setOnClickListener {
+            dialog.dismiss()
+            showConversationsDialog()
+        }
+
+        view.findViewById<View>(R.id.menuMemories)?.setOnClickListener {
+            dialog.dismiss()
+            showMemoriesDialog()
+        }
+
+        view.findViewById<TextView>(R.id.txtMenuVersion)?.text = "DynamicEdgeAI • ${AppVersion.label}"
+
+        // Wire GitHub Auto-Updater card
+        val updateCardView = view.findViewById<View>(R.id.bottomSheetUpdateCard)
+        if (updateCardView != null) {
+            val updateCardBinder = UpdateCardBinder(updateCardView, this, this)
+            updateCardBinder.bind()
+
+            view.findViewById<View>(R.id.menuCheckUpdates).setOnClickListener {
+                lifecycleScope.launch {
+                    AppUpdateManager.getInstance().checkForUpdate(this@MainActivity)
+                }
             }
-            container.addView(hint)
+        }
+
+        // List downloaded local models
+        val container = view.findViewById<LinearLayout>(R.id.menuModelsContainer)
+        val downloaded = LocalModel.values().filter { localModelRunner.isModelAvailable(it) }
+
+        if (downloaded.isEmpty()) {
+            val empty = TextView(this).apply {
+                text = "No models downloaded yet. Tap Models above."
+                setTextColor(0xFF888888.toInt())
+                textSize = 12f
+                setPadding(20, 16, 20, 16)
+            }
+            container.addView(empty)
         } else {
-            downloadedModels.forEach { model ->
-                val isActive = (localModelRunner.currentModel == model)
-
-                val row = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                    setPadding(48, 22, 48, 22)
-                    isClickable = true
-                    isFocusable = true
-                    // Resolve the theme attribute to an actual drawable resource ID
-                    val tv = android.util.TypedValue()
-                    if (context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)) {
-                        setBackgroundResource(tv.resourceId)
-                    }
-                }
-
-                // Checkmark (visible only for active model)
-                val icon = ImageView(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(40, 40)
-                    visibility = if (isActive) View.VISIBLE else View.INVISIBLE
-                    if (isActive) setImageResource(R.drawable.ic_check_green)
-                }
-                row.addView(icon)
-
-                // Model name
-                val nameView = TextView(this).apply {
-                    val lp = LinearLayout.LayoutParams(
-                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
-                    ).also { it.marginStart = 16 }
-                    layoutParams = lp
-                    text = model.displayName
-                    textSize = 14f
-                    setTextColor(if (isActive) 0xFF1B8C5E.toInt() else 0xFF333333.toInt())
-                    if (isActive) setTypeface(null, android.graphics.Typeface.BOLD)
-                }
-                row.addView(nameView)
-
-                // "ACTIVE" badge
-                if (isActive) {
-                    val badge = TextView(this).apply {
-                        text = "ACTIVE"
-                        textSize = 10f
-                        setTextColor(0xFF1B8C5E.toInt())
-                        setPadding(14, 4, 14, 4)
-                        try {
-                            background = ContextCompat.getDrawable(
-                                this@MainActivity, R.drawable.badge_recommended
-                            )
-                        } catch (_: Exception) {}
-                    }
-                    row.addView(badge)
+            downloaded.forEach { model ->
+                val isActive = localModelRunner.currentModel == model
+                val row = TextView(this).apply {
+                    text = "${if (isActive) "● " else "  "}${model.displayName} (${model.fileSizeLabel})"
+                    setTextColor(if (isActive) 0xFF1E88E5.toInt() else 0xFF333333.toInt())
+                    textSize = 13f
+                    setPadding(20, 12, 20, 12)
+                    setBackgroundResource(R.drawable.card_outline)
                 }
 
                 row.setOnClickListener {
                     if (!isActive) {
                         localModelRunner.switchModel(model)
-                        Toast.makeText(
-                            this, "Switched to ${model.displayName}", Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(this, "Switched to ${model.displayName}", Toast.LENGTH_SHORT).show()
                     }
                     dialog.dismiss()
                 }
@@ -291,6 +764,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        dialog.setContentView(view)
         dialog.show()
     }
 
@@ -326,41 +800,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun addUserBubble(text: String) {
-        val view = LayoutInflater.from(this).inflate(R.layout.item_chat_user, chatContainer, false)
-        view.findViewById<TextView>(R.id.messageText).text = text
-        val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-        view.findViewById<TextView>(R.id.timestamp).text = timeStr
-        val index = chatContainer.indexOfChild(thinkingIndicator)
-        chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
-    }
-
-    private fun addAIResponse(response: String, detail: com.dynamicedgeai.engine.StrategyDetail, latency: String) {
-        val view = LayoutInflater.from(this).inflate(R.layout.item_chat_ai, chatContainer, false)
-        view.findViewById<TextView>(R.id.messageText).text = response
-        view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${detail.strategy.name}"
-        val modelName = if (detail.strategy == Strategy.LOCAL) "${localModelRunner.currentModel.displayName} (On-Device)" else "Gemini 1.5 Flash (Cloud)"
-        view.findViewById<TextView>(R.id.modelUsedText).text = "Model: $modelName"
-        view.findViewById<TextView>(R.id.reasonText).text = "Reason: ${detail.reason}"
-        view.findViewById<TextView>(R.id.latencyText).text = "Latency: $latency"
-        view.findViewById<TextView>(R.id.networkUsedText).text = "Network Used: ${if (detail.strategy == Strategy.CLOUD) "Yes" else "No"}"
-        val index = chatContainer.indexOfChild(thinkingIndicator)
-        chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
-    }
-
-    private fun showThinking() {
-        thinkingIndicator.visibility = View.VISIBLE
-        val anim = AlphaAnimation(0.3f, 1.0f).apply { duration = 600; repeatMode = Animation.REVERSE; repeatCount = Animation.INFINITE }
-        thinkingText.startAnimation(anim)
-        scrollToBottom()
-    }
-
-    private fun hideThinking() {
-        thinkingText.clearAnimation()
-        thinkingIndicator.visibility = View.GONE
-    }
-
-    private fun scrollToBottom() { chatScrollView.post { chatScrollView.fullScroll(View.FOCUS_DOWN) } }
+    // ── Resource Telemetry Monitoring ─────────────────────────────────────────
 
     private fun startResourceMonitoring() {
         lifecycleScope.launch {
@@ -381,10 +821,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUI(state: DeviceState) {
         val ramFormatted = if (state.ramAvailable > 1024) String.format(Locale.US, "%.1f GB", state.ramAvailable / 1024f) else "${state.ramAvailable} MB"
-        ramLabel.text = "RAM Free: $ramFormatted"
+        ramLabel.text = "RAM: $ramFormatted"
         val ramRatio = if (state.totalRam > 0) state.ramAvailable.toDouble() / state.totalRam else 1.0
         ramIndicator.setImageResource(when { ramRatio > 0.30 -> R.drawable.ic_check_green; ramRatio > 0.20 -> R.drawable.dot_orange; else -> R.drawable.dot_red })
-        cpuLabel.text = "CPU Usage: ${state.cpuUsage}%"
+        cpuLabel.text = "CPU: ${state.cpuUsage}%"
         cpuIndicator.setImageResource(when { state.cpuUsage < 40 -> R.drawable.dot_green; state.cpuUsage < 80 -> R.drawable.dot_orange; else -> R.drawable.dot_red })
         val networkIcon = if (state.networkQuality != NetworkQuality.POOR && state.networkQuality != NetworkQuality.UNKNOWN) "🔄" else "⚠️"
         val networkStr = when(state.networkQuality) {
@@ -395,7 +835,7 @@ class MainActivity : AppCompatActivity() {
             else -> "UNKNOWN"
         }
         networkLabel.text = "Network: $networkIcon $networkStr"
-        batteryLabel.text = "Battery Level: ${state.batteryLevel.toInt()}%"
+        batteryLabel.text = "Battery: ${state.batteryLevel.toInt()}%"
         val detail = decisionEngine.determineStrategy(state)
         val displayStrategy = if (privacyModeToggle.isChecked) Strategy.LOCAL else detail.strategy
         insightModeText.text = displayStrategy.name

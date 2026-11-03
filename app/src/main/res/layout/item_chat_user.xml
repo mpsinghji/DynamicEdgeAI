@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="end"
@@ -12,49 +13,69 @@
         android:layout_height="wrap_content"
         android:background="@drawable/bubble_user"
         android:padding="12dp"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:clickable="true"
         android:focusable="true">
-        <TextView
-            android:id="@+id/messageText"
+
+        <ImageView
+            android:id="@+id/userAttachedImage"
+            android:layout_width="200dp"
+            android:layout_height="140dp"
+            android:scaleType="centerCrop"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#444444"
-            android:textSize="14sp"
-            android:textIsSelectable="true" />
-        <TextView
-            android:id="@+id/timestamp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#999999"
-            android:textSize="10sp"
-            android:layout_marginStart="8dp" />
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/messageText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#444444"
+                android:textSize="14sp"
+                android:textIsSelectable="true" />
+
+            <TextView
+                android:id="@+id/timestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#999999"
+                android:textSize="10sp"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- Quick Actions (Hidden by default) -->
+    <!-- Quick Actions (Copy / Edit) -->
     <LinearLayout
         android:id="@+id/userActions"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="4dp"
-        android:visibility="gone">
+        android:layout_marginTop="2dp"
+        android:visibility="visible">
+
         <ImageButton
             android:id="@+id/copyButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:src="@drawable/ic_copy"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="6dp"
+            android:padding="4dp"
+            app:tint="#888888"
             android:scaleType="fitCenter"/>
+
         <ImageButton
             android:id="@+id/editButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="4dp"
             android:src="@drawable/ic_edit"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="6dp"
+            android:padding="4dp"
+            app:tint="#888888"
             android:scaleType="fitCenter"/>
     </LinearLayout>
 </LinearLayout>

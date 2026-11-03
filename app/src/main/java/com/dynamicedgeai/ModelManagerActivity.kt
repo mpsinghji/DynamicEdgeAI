@@ -10,6 +10,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.dynamicedgeai.local.LocalModel
 import com.dynamicedgeai.local.LocalModelRunner
+import com.dynamicedgeai.util.AppVersion
 import com.dynamicedgeai.util.DownloadManagerSingleton
 import com.dynamicedgeai.util.ModelStatus
 import java.io.File
@@ -42,6 +43,7 @@ class ModelManagerActivity : AppCompatActivity() {
         txtStorageInfo = findViewById(R.id.txtStorageInfo)
 
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener { finish() }
+        findViewById<TextView>(R.id.txtAppVersionModelManager)?.text = "Dynamic Edge AI • ${AppVersion.shortLabel}"
 
         buildModelList()
         updateStorageInfo()
@@ -143,11 +145,18 @@ class ModelManagerActivity : AppCompatActivity() {
 
                 val progressBar = card.findViewById<ProgressBar>(R.id.modelProgressBar)
                 val txtPercent = card.findViewById<TextView>(R.id.txtProgressPercent)
+                val txtSize = card.findViewById<TextView>(R.id.txtDownloadSize)
+                val txtSpeed = card.findViewById<TextView>(R.id.txtDownloadSpeed)
+                val txtEta = card.findViewById<TextView>(R.id.txtDownloadEta)
                 val txtProgressStatus = card.findViewById<TextView>(R.id.txtProgressStatus)
+
                 if (activeDl != null) {
                     progressBar.progress = activeDl.progress
                     txtPercent.text = "${activeDl.progress}%"
-                    txtProgressStatus.text = "Downloading..."
+                    txtSize.text = activeDl.downloadSizeText.ifBlank { "Downloading..." }
+                    txtSpeed.text = "Speed: ${activeDl.speedLabel}"
+                    txtEta.text = "Remaining: ${activeDl.etaLabel}"
+                    txtProgressStatus.text = activeDl.statusText
                 }
 
                 btnPause.setImageResource(R.drawable.ic_pause)
@@ -164,11 +173,18 @@ class ModelManagerActivity : AppCompatActivity() {
 
                 val progressBar = card.findViewById<ProgressBar>(R.id.modelProgressBar)
                 val txtPercent = card.findViewById<TextView>(R.id.txtProgressPercent)
+                val txtSize = card.findViewById<TextView>(R.id.txtDownloadSize)
+                val txtSpeed = card.findViewById<TextView>(R.id.txtDownloadSpeed)
+                val txtEta = card.findViewById<TextView>(R.id.txtDownloadEta)
                 val txtProgressStatus = card.findViewById<TextView>(R.id.txtProgressStatus)
+
                 if (activeDl != null) {
                     progressBar.progress = activeDl.progress
                     txtPercent.text = "${activeDl.progress}%"
-                    txtProgressStatus.text = "Paused"
+                    txtSize.text = activeDl.downloadSizeText
+                    txtSpeed.text = "Speed: Paused"
+                    txtEta.text = "Remaining: --"
+                    txtProgressStatus.text = "Paused (Tap Resume to continue)"
                 }
 
                 btnPause.setImageResource(android.R.drawable.ic_media_play)
@@ -189,8 +205,9 @@ class ModelManagerActivity : AppCompatActivity() {
                 }
             }
             ModelStatus.CORRUPTED -> {
-                txtStatus.text = "⚠ Corrupted"
+                txtStatus.text = "⚠ Corrupted (Tap for details)"
                 txtStatus.setTextColor(0xFFF44336.toInt())
+                txtStatus.setOnClickListener { showModelDiagnosticDialog(model) }
                 btnRepair.visibility = View.VISIBLE
                 btnUninstall.visibility = View.VISIBLE
                 btnRepair.setOnClickListener { startDownload(model, false) }
@@ -234,15 +251,9 @@ class ModelManagerActivity : AppCompatActivity() {
             model = model,
             destination = destination,
             resume = resume,
-            onProgress = { progress ->
-                // Progress is updated by the periodic refresh handler
-            },
-            onPaused = {
-                // Updated by periodic refresh handler
-            },
-            onResumed = {
-                // Updated by periodic refresh handler
-            },
+            onProgress = { _ -> },
+            onPaused = { },
+            onResumed = { },
             onComplete = { _ ->
                 runOnUi {
                     updateCardStatus(model, card)
@@ -307,7 +318,7 @@ class ModelManagerActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
-    }
+        }
 
     private fun useModel(model: LocalModel) {
         localModelRunner.switchModel(model)
@@ -320,6 +331,31 @@ class ModelManagerActivity : AppCompatActivity() {
             val card = cardViews[model] ?: return@forEach
             setupCard(model, card)
         }
+    }
+
+    private fun showModelDiagnosticDialog(model: LocalModel) {
+        val path = localModelRunner.getModelPath(model)
+        val details = buildString {
+            appendLine("Model: ${model.displayName}")
+            appendLine("File: ${path.absolutePath}")
+            appendLine("Expected Size: ${model.fileSizeLabel}")
+            if (path.exists()) {
+                val actualMb = path.length() / (1024.0 * 1024.0)
+                appendLine("Actual Size: ${String.format(java.util.Locale.US, "%.1f MB", actualMb)}")
+            } else {
+                appendLine("File Status: Missing from disk")
+            }
+            appendLine()
+            appendLine("Diagnostics:")
+            appendLine(localModelRunner.diagnosticInfo)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Model Diagnostic Details")
+            .setMessage(details)
+            .setPositiveButton("Repair / Redownload") { _, _ -> startDownload(model, false) }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun runOnUi(block: () -> Unit) {

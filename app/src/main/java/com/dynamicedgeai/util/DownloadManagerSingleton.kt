@@ -6,19 +6,22 @@ import com.dynamicedgeai.service.DownloadForegroundService
 import java.io.File
 
 /**
- * Application-level singleton that keeps download state alive across activity re-creation.
- * Downloads survive when user navigates back from ModelManagerActivity or minimizes the app.
- * Automatically starts/stops a ForegroundService to keep downloads alive in background.
+ * Application-level singleton that coordinates resumable model downloads,
+ * live speed tracking, network switching resilience, and ForegroundService lifecycle.
  */
 object DownloadManagerSingleton {
 
     data class ActiveDownload(
         val model: LocalModel,
-        val downloader: ParallelDownloader,
+        val resumeManager: DownloadResumeManager,
         var status: ModelStatus,
         var progress: Int,
-        var isPaused: Boolean,
-        var errorMessage: String?
+        var speedLabel: String = "0 KB/s",
+        var etaLabel: String = "--",
+        var downloadSizeText: String = "",
+        var statusText: String = "Downloading...",
+        var isPaused: Boolean = false,
+        var errorMessage: String? = null
     )
 
     private val activeDownloads = mutableMapOf<LocalModel, ActiveDownload>()
@@ -39,84 +42,83 @@ object DownloadManagerSingleton {
         model: LocalModel,
         destination: File,
         resume: Boolean,
-        onProgress: (Int) -> Unit,
+        onProgress: (DownloadProgressInfo) -> Unit,
         onPaused: () -> Unit,
         onResumed: () -> Unit,
         onComplete: (File) -> Unit,
         onError: (String) -> Unit
     ) {
         // Cancel any existing download for this model
-        activeDownloads[model]?.downloader?.cancel()
+        activeDownloads[model]?.resumeManager?.cancelDownload()
 
-        val tempDestination = File(destination.absolutePath + ".tmp")
-
-        if (!resume) {
-            tempDestination.parentFile?.mkdirs()
-            if (tempDestination.exists()) tempDestination.delete()
-            if (destination.exists()) destination.delete()
-        }
-
-        val downloader = ParallelDownloader()
-        val activeDl = ActiveDownload(model, downloader, ModelStatus.DOWNLOADING, 0, false, null)
+        val resumeManager = DownloadResumeManager(context)
+        val activeDl = ActiveDownload(
+            model = model,
+            resumeManager = resumeManager,
+            status = ModelStatus.DOWNLOADING,
+            progress = 0
+        )
         activeDownloads[model] = activeDl
 
-        // Start foreground service to keep download alive in background
         DownloadForegroundService.start(context)
 
-        downloader.download(model.downloadUrl, tempDestination, object : ParallelDownloader.DownloadListener {
-            override fun onStart(totalSize: Long) {
+        resumeManager.startDownload(model, destination, object : ResumableDownloadListener {
+            override fun onDownloadStarted(totalBytes: Long) {
                 activeDl.status = ModelStatus.DOWNLOADING
+                activeDl.statusText = "Starting download..."
             }
 
-            override fun onProgress(progress: Int, speed: String) {
-                activeDl.progress = progress
-                onProgress(progress)
+            override fun onDownloadProgress(info: DownloadProgressInfo) {
+                activeDl.progress = info.percent
+                activeDl.speedLabel = info.speedLabel
+                activeDl.etaLabel = info.etaLabel
+                activeDl.downloadSizeText = info.statusText
+                activeDl.statusText = "Downloading..."
+                activeDl.status = ModelStatus.DOWNLOADING
+                onProgress(info)
             }
 
-            override fun onPaused() {
+            override fun onDownloadPaused(downloadedBytes: Long, totalBytes: Long) {
                 activeDl.isPaused = true
                 activeDl.status = ModelStatus.PAUSED
+                activeDl.statusText = "Paused"
+                activeDl.speedLabel = "0 KB/s"
                 onPaused()
             }
 
-            override fun onResumed() {
-                activeDl.isPaused = false
-                activeDl.status = ModelStatus.DOWNLOADING
-                onResumed()
+            override fun onWaitingForNetwork() {
+                activeDl.statusText = "Waiting for network..."
+                activeDl.speedLabel = "0 KB/s"
+                activeDl.etaLabel = "--"
             }
 
-            override fun onComplete(file: File) {
-                // Rename .tmp file to final destination
-                if (file.exists()) {
-                    if (destination.exists()) destination.delete()
-                    file.renameTo(destination)
-                }
+            override fun onDownloadCompleted(destinationFile: File) {
                 activeDownloads.remove(model)
                 DownloadForegroundService.stopIfNoActiveDownloads(context)
-                onComplete(destination)
+                onComplete(destinationFile)
             }
 
-            override fun onError(error: String) {
+            override fun onDownloadError(errorMessage: String) {
                 activeDl.status = ModelStatus.NOT_DOWNLOADED
-                activeDl.errorMessage = error
+                activeDl.errorMessage = errorMessage
                 activeDownloads.remove(model)
                 DownloadForegroundService.stopIfNoActiveDownloads(context)
-                onError(error)
+                onError(errorMessage)
             }
-        }, resume)
+        }, isResuming = resume)
     }
 
     fun pauseDownload(model: LocalModel) {
-        activeDownloads[model]?.downloader?.pause()
+        activeDownloads[model]?.resumeManager?.pauseDownload()
     }
 
     fun resumeDownload(model: LocalModel) {
-        activeDownloads[model]?.downloader?.resume()
+        activeDownloads[model]?.resumeManager?.resumeDownload()
     }
 
     fun cancelDownload(context: Context, model: LocalModel) {
         activeDownloads[model]?.let {
-            it.downloader.cancel()
+            it.resumeManager.cancelDownload()
             activeDownloads.remove(model)
             DownloadForegroundService.stopIfNoActiveDownloads(context)
         }

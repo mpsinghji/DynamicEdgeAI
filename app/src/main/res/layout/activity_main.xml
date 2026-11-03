@@ -31,6 +31,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
                 <TextView
+                    android:id="@+id/appTitleText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Adaptive Edge AI"
@@ -38,6 +39,7 @@
                     android:textSize="18sp"
                     android:textStyle="bold" />
                 <TextView
+                    android:id="@+id/appSubtitleText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Intelligent Adaptive AI System"
@@ -54,6 +56,32 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
+            <!-- New Chat quick button -->
+            <ImageButton
+                android:id="@+id/btnHeaderNewChat"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_add"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="#1E88E5"
+                android:scaleType="fitCenter"
+                android:padding="4dp"
+                android:contentDescription="New Chat"
+                android:layout_marginEnd="6dp" />
+
+            <!-- Conversations history quick button -->
+            <ImageButton
+                android:id="@+id/btnHeaderConversations"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_history"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="#455A64"
+                android:scaleType="fitCenter"
+                android:padding="4dp"
+                android:contentDescription="Chat History"
+                android:layout_marginEnd="10dp" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -66,7 +94,7 @@
                 android:id="@+id/privacyModeToggle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="10dp"
                 android:checked="false" />
 
             <LinearLayout
@@ -85,11 +113,11 @@
                     android:text="Insights"
                     android:textSize="12sp"
                     android:textColor="#666666"
-                    android:layout_marginEnd="6dp"/>
+                    android:layout_marginEnd="4dp"/>
                 <ImageView
                     android:id="@+id/insightsInfoIcon"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
                     android:src="@drawable/ic_ai_small"
                     app:tint="#666666" />
             </LinearLayout>
@@ -113,95 +141,111 @@
             android:orientation="vertical"
             android:elevation="2dp">
 
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="#E3F2FD"
-                android:padding="10dp">
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_app_logo"
-                    app:tint="@color/accent_blue" />
+                android:background="@drawable/card_outline"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Live Telemetry"
+                    android:textSize="12sp"
+                    android:textColor="#555555" />
+
+                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+
                 <TextView
                     android:id="@+id/insightModeText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="28dp"
-                    android:layout_centerVertical="true"
                     android:text="LOCAL"
-                    android:textColor="@color/accent_blue"
                     android:textStyle="bold"
-                    android:textSize="13sp" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:text="Live"
-                    android:textColor="#777777"
-                    android:textSize="11sp" />
-            </RelativeLayout>
+                    android:textSize="12sp"
+                    android:textColor="@color/mode_local" />
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:orientation="horizontal"
+                android:baselineAligned="false"
                 android:padding="12dp">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-                    <TextView
-                        android:id="@+id/ramLabel"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="RAM Free: Calculating..."
-                        android:textColor="#333333"
-                        android:textSize="13sp" />
-                    <ImageView
-                        android:id="@+id/ramIndicator"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:layout_marginStart="6dp"
-                        android:src="@drawable/dot_orange" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:id="@+id/ramIndicator"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:src="@drawable/ic_check_green"
+                            android:layout_marginEnd="6dp"/>
+                        <TextView
+                            android:id="@+id/ramLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RAM: --"
+                            android:textSize="11sp"
+                            android:textColor="#444444" />
+                    </LinearLayout>
 
-                    <View android:layout_width="20dp" android:layout_height="1dp" />
-
-                    <ImageView
-                        android:id="@+id/cpuIndicator"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:layout_marginEnd="6dp"
-                        android:src="@drawable/dot_green" />
-                    <TextView
-                        android:id="@+id/cpuLabel"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="CPU Usage: Calculating..."
-                        android:textColor="#333333"
-                        android:textSize="13sp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="4dp">
+                        <ImageView
+                            android:id="@+id/cpuIndicator"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:src="@drawable/dot_green"
+                            android:layout_marginEnd="6dp"/>
+                        <TextView
+                            android:id="@+id/cpuLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="CPU: --"
+                            android:textSize="11sp"
+                            android:textColor="#444444" />
+                    </LinearLayout>
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/networkLabel"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Network: Calculating..."
-                    android:textColor="#333333"
-                    android:textSize="13sp" />
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/batteryLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Battery Level: Calculating..."
-                    android:textColor="#333333"
-                    android:textSize="13sp" />
+                    <TextView
+                        android:id="@+id/networkLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Network: --"
+                        android:textSize="11sp"
+                        android:textColor="#444444" />
+
+                    <TextView
+                        android:id="@+id/batteryLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Battery: --"
+                        android:textSize="11sp"
+                        android:textColor="#444444"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
@@ -241,7 +285,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Footer Input -->
+    <!-- Footer Input with Image Preview and Attachment Support -->
     <LinearLayout
         android:id="@+id/inputArea"
         android:layout_width="match_parent"
@@ -252,6 +296,48 @@
         android:elevation="8dp">
 
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0" />
+
+        <!-- Image Attachment Preview Box (visible when image attached) -->
+        <LinearLayout
+            android:id="@+id/imagePreviewContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgPreviewThumbnail"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:scaleType="centerCrop"
+                android:background="@drawable/card_outline" />
+
+            <TextView
+                android:id="@+id/txtPreviewFilename"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="image.jpg"
+                android:textSize="12sp"
+                android:textColor="#333333"
+                android:singleLine="true"
+                android:ellipsize="middle" />
+
+            <ImageButton
+                android:id="@+id/btnRemoveImage"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_close"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="#F44336"
+                android:scaleType="fitCenter" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -264,10 +350,21 @@
                 android:id="@+id/menuButton"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="6dp"
                 android:background="@drawable/input_bg"
                 android:src="@drawable/ic_menu"
                 app:tint="#666666" />
+
+            <!-- Gallery Image Picker Button -->
+            <ImageButton
+                android:id="@+id/btnAttachImage"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/input_bg"
+                android:src="@drawable/ic_image"
+                app:tint="#666666"
+                android:contentDescription="Attach Image" />
 
             <EditText
                 android:id="@+id/messageInput"
@@ -287,7 +384,7 @@
                 android:id="@+id/sendButton"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="10dp"
                 android:background="@drawable/input_bg"
                 android:backgroundTint="@color/btn_blue"
                 android:src="@drawable/ic_send"

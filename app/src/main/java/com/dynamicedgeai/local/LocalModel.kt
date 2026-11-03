@@ -56,10 +56,22 @@ enum class LocalModel(
         expectedSizeBytes = 480_000_000L,
         description = "TinyLlama 1.1B (GGUF)",
         isRecommended = false
+    ),
+
+    GEMMA_4_E4B(
+        "Gemma 4 E4B-it",
+        "gemma-4-E4B-it.litertlm",
+        "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm?download=true",
+        expectedSizeBytes = 3_659_530_240L,
+        description = "Google Gemma 4 E4B-it LiteRT-LM — instruction-tuned on-device model",
+        isRecommended = false
     );
 
-    /** True for GGUF models (llama.cpp), false for .bin models (MediaPipe) */
+    /** True for GGUF models (llama.cpp), false for .bin / .litertlm models (MediaPipe / LiteRT-LM) */
     val isGguf: Boolean get() = fileName.endsWith(".gguf")
+
+    /** True for LiteRT-LM models */
+    val isLiteRtLm: Boolean get() = fileName.endsWith(".litertlm")
 
     /** Human-readable file size string */
     val fileSizeLabel: String

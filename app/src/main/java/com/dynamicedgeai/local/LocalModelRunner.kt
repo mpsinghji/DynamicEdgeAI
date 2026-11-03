@@ -2,11 +2,15 @@ package com.dynamicedgeai.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.BitmapFactory
 import android.util.Log
+import com.dynamicedgeai.router.ChatMessage
 import com.dynamicedgeai.util.IntegrityResult
 import com.dynamicedgeai.util.ModelIntegrityChecker
 import com.dynamicedgeai.util.ModelStatus
+import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
+import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -16,8 +20,8 @@ import kotlin.random.Random
  * Unified local inference runner.
  *
  * Routes by model type:
- *  - Gemma 2B (.bin)  -> MediaPipe LlmInference
- *  - TinyLlama (.gguf) / DeepSeek (.gguf) -> GgufModelEngine (llama.cpp)
+ *  - Gemma 2B (.bin) / Gemma 4 (.litertlm) -> MediaPipe / LiteRT LlmInference & LlmInferenceSession
+ *  - TinyLlama (.gguf) / Qwen (.gguf)      -> GgufModelEngine (llama.cpp)
  */
 class LocalModelRunner private constructor(context: Context) {
 
@@ -59,13 +63,14 @@ class LocalModelRunner private constructor(context: Context) {
     var isInitialized = false
         private set
 
-    // MediaPipe engine — used for Gemma 2B .bin only
+    // MediaPipe / LiteRT engine — used for Gemma models (.bin and .litertlm)
     private var llmInference: LlmInference? = null
 
     // llama.cpp engine — used for all .gguf models
     private var ggufEngine: GgufModelEngine? = null
 
-    private var diagnosticInfo: String = "Ready"
+    var diagnosticInfo: String = "Ready"
+        private set
 
     // ── Path resolution ───────────────────────────────────────────────────────
 
@@ -76,7 +81,7 @@ class LocalModelRunner private constructor(context: Context) {
         if (ext.exists()) return ext
         val int_ = File(appContext.filesDir, model.fileName)
         if (int_.exists()) return int_
-        return ext   // canonical "expected" path even if absent
+        return ext   // canonical expected path
     }
 
     fun isModelAvailable(model: LocalModel): Boolean =
@@ -128,10 +133,12 @@ class LocalModelRunner private constructor(context: Context) {
 
         val modelFile = getModelPath(currentModel)
         if (!modelFile.exists()) {
+            diagnosticInfo = "Stage: File Verification\nError: Model file does not exist on disk.\nSuggestion: Download the model in Model Manager."
             Log.e(tag, "Model file not found: ${modelFile.absolutePath}")
             return false
         }
         if (getModelStatus(currentModel) != ModelStatus.DOWNLOADED) {
+            diagnosticInfo = "Stage: Integrity Check\nError: Model file size or checksum mismatch.\nSuggestion: Use the Repair button in Model Manager."
             Log.e(tag, "Model status not DOWNLOADED for ${currentModel.displayName}")
             return false
         }
@@ -142,8 +149,6 @@ class LocalModelRunner private constructor(context: Context) {
             initMediaPipeEngine(modelFile)
         }
     }
-
-    // LocalModelRunner.kt — replace initGgufEngine entirely
 
     private suspend fun initGgufEngine(modelFile: File): Boolean {
         return withContext(Dispatchers.IO) {
@@ -156,7 +161,7 @@ class LocalModelRunner private constructor(context: Context) {
                     modelFile
                 )
 
-                val result: String = engine.load(uri.toString()) // returns "OK" or error message
+                val result: String = engine.load(uri.toString())
 
                 if (result == "OK") {
                     ggufEngine = engine
@@ -165,12 +170,12 @@ class LocalModelRunner private constructor(context: Context) {
                     true
                 } else {
                     engine.release()
-                    diagnosticInfo = result  // contains the actual error string
+                    diagnosticInfo = "Stage: GGUF Model Loading\nError: $result\nSuggestion: Ensure sufficient free RAM is available."
                     Log.e(tag, "GGUF engine failed: $result")
                     false
                 }
             } catch (e: Exception) {
-                diagnosticInfo = e.localizedMessage ?: "Unknown error"
+                diagnosticInfo = "Stage: GGUF Exception\nError: ${e.localizedMessage ?: "Unknown error"}\nSuggestion: Restart the app or check logcat."
                 Log.e(tag, "GGUF engine exception: ${e.localizedMessage}", e)
                 false
             }
@@ -179,40 +184,60 @@ class LocalModelRunner private constructor(context: Context) {
 
     private fun initMediaPipeEngine(modelFile: File): Boolean {
         return try {
-            Log.i(tag, "Loading Gemma via MediaPipe from ${modelFile.absolutePath}")
-            val options = LlmInference.LlmInferenceOptions.builder()
+            Log.i(tag, "Loading Gemma via MediaPipe/LiteRT 0.10.35 from ${modelFile.absolutePath}")
+            
+            // First attempt: GPU Backend with multimodal configuration
+            try {
+                val gpuOptions = LlmInference.LlmInferenceOptions.builder()
+                    .setModelPath(modelFile.absolutePath)
+                    .setMaxTokens(2048)
+                    .setMaxNumImages(if (currentModel.isLiteRtLm) 1 else 0)
+                    .setPreferredBackend(LlmInference.Backend.GPU)
+                    .build()
+                llmInference = LlmInference.createFromOptions(appContext, gpuOptions)
+                isInitialized = true
+                Log.i(tag, "MediaPipe/LiteRT engine ready with GPU backend: ${currentModel.displayName}")
+                return true
+            } catch (gpuError: Exception) {
+                Log.w(tag, "GPU initialization failed, falling back to CPU: ${gpuError.message}")
+            }
+
+            // Fallback: CPU Backend
+            val cpuOptions = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile.absolutePath)
-                .setMaxTokens(512)
-                .setTemperature(0.7f)
-                .setTopK(40)
-                .setRandomSeed(Random.nextInt())
+                .setMaxTokens(2048)
+                .setMaxNumImages(if (currentModel.isLiteRtLm) 1 else 0)
+                .setPreferredBackend(LlmInference.Backend.CPU)
                 .build()
-            llmInference = LlmInference.createFromOptions(appContext, options)
+            llmInference = LlmInference.createFromOptions(appContext, cpuOptions)
             isInitialized = true
-            Log.i(tag, "MediaPipe engine ready: ${currentModel.displayName}")
+            Log.i(tag, "MediaPipe/LiteRT engine ready with CPU fallback: ${currentModel.displayName}")
             true
         } catch (e: Exception) {
+            diagnosticInfo = "Stage: LiteRT-LM Engine Initialization\n" +
+                    "Error: ${e.localizedMessage ?: "Failed to initialize engine"}\n" +
+                    "Suggestion: Verify model file matches ${currentModel.fileSizeLabel} and that phone has at least 4GB free RAM."
             Log.e(tag, "MediaPipe engine failed: ${e.localizedMessage}", e)
             false
         }
     }
 
-    // ── Gemma chat template (MediaPipe only) ──────────────────────────────────
+    // ── Gemma chat template (MediaPipe / LiteRT) ──────────────────────────────
 
     private fun applyGemmaTemplate(q: String): String {
-        val usrOpen  = "\u003cstart_of_turn\u003euser\n"
-        val usrClose = "\u003cend_of_turn\u003e\n"
-        val mdlOpen  = "\u003cstart_of_turn\u003emodel\n"
+        val usrOpen  = "<start_of_turn>user\n"
+        val usrClose = "<end_of_turn>\n"
+        val mdlOpen  = "<start_of_turn>model\n"
         return "$usrOpen${q.trim()}$usrClose$mdlOpen"
     }
 
     private fun cleanGemmaResponse(raw: String): String {
         var r = raw
         listOf(
-            "\u003cend_of_turn\u003e",
-            "\u003cstart_of_turn\u003emodel",
-            "\u003cstart_of_turn\u003euser",
-            "\u003cstart_of_turn\u003e"
+            "<end_of_turn>",
+            "<start_of_turn>model",
+            "<start_of_turn>user",
+            "<start_of_turn>"
         ).forEach { r = r.replace(it, "") }
         r = r.replace(Regex("\n{3,}"), "\n\n").trim()
         val paras = r.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }
@@ -221,15 +246,17 @@ class LocalModelRunner private constructor(context: Context) {
 
     // ── Public inference entry-point ──────────────────────────────────────────
 
-    suspend fun runInference(history: List<com.dynamicedgeai.router.ChatMessage>): String = withContext(Dispatchers.Default) {
+    suspend fun runInference(
+        history: List<ChatMessage>,
+        imagePath: String? = null
+    ): String = withContext(Dispatchers.Default) {
         val ready = ensureInitialized()
         val latestPrompt = history.lastOrNull()?.content ?: ""
 
         if (!ready) {
-            val errorMsg = "⚠ Model not ready: ${currentModel.displayName}\n" +
+            return@withContext "⚠ Model not ready: ${currentModel.displayName}\n" +
                     "File: ${getModelPath(currentModel).absolutePath}\n" +
-                    "Reason: $diagnosticInfo"
-            return@withContext errorMsg
+                    "Details:\n$diagnosticInfo"
         }
 
         return@withContext try {
@@ -237,11 +264,35 @@ class LocalModelRunner private constructor(context: Context) {
                 // llama.cpp path
                 ggufEngine?.generate(history) ?: "GGUF engine not initialized."
             } else {
-                // MediaPipe path (Gemma 2B)
-                val formatted = applyGemmaTemplate(latestPrompt)
-                val raw = llmInference?.generateResponse(formatted)
-                    ?: "No response from MediaPipe engine."
-                cleanGemmaResponse(raw)
+                // MediaPipe / LiteRT-LM path
+                val engine = llmInference ?: return@withContext "Engine not initialized."
+                val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
+                    .setTemperature(0.7f)
+                    .setTopK(40)
+                    .setRandomSeed(Random.nextInt())
+                    .build()
+
+                val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
+                try {
+                    // If image is provided and model is multimodal (Gemma 4)
+                    if (!imagePath.isNullOrBlank() && currentModel.isLiteRtLm) {
+                        val imgFile = File(imagePath)
+                        if (imgFile.exists() && imgFile.canRead()) {
+                            val bitmap = BitmapFactory.decodeFile(imagePath)
+                            if (bitmap != null) {
+                                val mpImage = BitmapImageBuilder(bitmap).build()
+                                session.addImage(mpImage)
+                            }
+                        }
+                    }
+
+                    val formatted = applyGemmaTemplate(latestPrompt)
+                    session.addQueryChunk(formatted)
+                    val raw = session.generateResponse()
+                    cleanGemmaResponse(raw)
+                } finally {
+                    session.close()
+                }
             }
         } catch (e: Exception) {
             Log.e(tag, "Inference error", e)

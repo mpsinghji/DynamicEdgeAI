@@ -2,4 +2,5 @@
 <paths>
     <external-files-path name="models" path="." />
     <files-path name="internal_models" path="." />
+    <cache-path name="cache" path="." />
 </paths>

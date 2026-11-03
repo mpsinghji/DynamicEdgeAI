@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="12dp"
+    android:background="?attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/txtMemoryFact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Memory fact description"
+            android:textSize="13sp"
+            android:textColor="#333333" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/txtMemoryCategory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PREFERENCE"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#1E88E5"
+                android:background="@drawable/badge_status"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp" />
+
+            <TextView
+                android:id="@+id/txtMemoryDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Saved recently"
+                android:textSize="10sp"
+                android:textColor="#999999"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btnDeleteMemory"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_close"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="6dp"
+        app:tint="#F44336"
+        android:scaleType="fitCenter"
+        android:contentDescription="Delete Memory" />
+
+</LinearLayout>
+
