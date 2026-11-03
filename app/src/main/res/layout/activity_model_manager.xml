@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/app_bg"
     android:fitsSystemWindows="true">
 
     <!-- Header (Morphe/ReVanced Inspired Sleek Header) -->
     <RelativeLayout
+        android:id="@+id/headerModelManager"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/app_header_bg"
@@ -34,14 +34,15 @@
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:layout_toEndOf="@id/btnBack"
+            android:layout_toStartOf="@+id/txtStorageInfo"
             android:layout_marginStart="14dp"
             android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Edge Models"
-                android:textSize="20sp"
+                android:text="Models"
+                android:textSize="22sp"
                 android:textStyle="bold"
                 android:textColor="@color/app_text_primary" />
 
@@ -49,7 +50,7 @@
                 android:id="@+id/txtAppVersionModelManager"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="4 local models • On-device intelligence"
+                android:text="4 edge models • 1 active"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_muted" />
         </LinearLayout>
@@ -71,18 +72,207 @@
             android:paddingBottom="5dp" />
     </RelativeLayout>
 
-    <!-- Model List -->
+    <!-- Main Content List with Bottom Padding for Floating Dock -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_below="@id/headerModelManager"
+        android:clipToPadding="false"
+        android:paddingBottom="84dp"
         android:fillViewport="true">
 
         <LinearLayout
-            android:id="@+id/modelListContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp" />
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="12dp">
+
+            <!-- Morphe-Style Top Summary / Sync Card (e.g. "Updating sources... 3/4") -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/summaryStatusCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/app_surface_card">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="14dp">
+
+                    <ImageView
+                        android:id="@+id/summaryStatusIcon"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:src="@drawable/ic_cpu"
+                        android:background="@drawable/menu_icon_bg"
+                        android:padding="8dp"
+                        app:tint="#38BDF8"
+                        android:layout_marginEnd="12dp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_toEndOf="@id/summaryStatusIcon"
+                        android:layout_toStartOf="@+id/summaryBadgePill"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/txtSummaryTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Active Engine: Gemma 4 E4B"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/app_text_primary"
+                            android:singleLine="true"
+                            android:ellipsize="end" />
+
+                        <TextView
+                            android:id="@+id/txtSummarySubtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="On-Device LiteRT • Offline Ready"
+                            android:textSize="12sp"
+                            android:textColor="@color/app_text_muted"
+                            android:singleLine="true"
+                            android:ellipsize="end" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/summaryBadgePill"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/bg_status_badge_local"
+                        android:text="● Ready"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="#16A34A"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp" />
+                </RelativeLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Model List Container for the 4 Tinted Morphe Cards -->
+            <LinearLayout
+                android:id="@+id/modelListContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
     </ScrollView>
 
-</LinearLayout>
+    <!-- Floating Bottom Navigation Dock (Centered Capsule matching Morphe Design) -->
+    <LinearLayout
+        android:id="@+id/floatingBottomDock"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_floating_bottom_bar"
+        android:elevation="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <!-- Chat Tab -->
+        <LinearLayout
+            android:id="@+id/btnNavChat"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_chat"
+                app:tint="@color/app_text_muted" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Chat"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_muted"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+
+        <!-- Models Tab (Active Highlighted Pill) -->
+        <LinearLayout
+            android:id="@+id/btnNavModels"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:background="@drawable/bg_floating_nav_active"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_cpu"
+                app:tint="@color/accent_blue" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Models"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent_blue"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+
+        <!-- Settings Tab -->
+        <LinearLayout
+            android:id="@+id/btnNavSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/app_text_muted" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Settings"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_muted"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+</RelativeLayout>

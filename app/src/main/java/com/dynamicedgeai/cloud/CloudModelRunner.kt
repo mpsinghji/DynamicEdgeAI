@@ -114,12 +114,15 @@ class CloudModelRunner(private val context: Context? = null) {
     private suspend fun runGeminiInference(apiKey: String, prompt: String, imagePath: String?): String {
         val parts = mutableListOf<Part>()
         if (!imagePath.isNullOrBlank()) {
-            val imageFile = File(imagePath)
-            if (imageFile.exists() && imageFile.canRead()) {
-                val bytes = imageFile.readBytes()
-                val base64Data = Base64.encodeToString(bytes, Base64.NO_WRAP)
-                val mime = if (imagePath.endsWith(".png", true)) "image/png" else "image/jpeg"
-                parts.add(Part(inline_data = InlineData(mime_type = mime, data = base64Data)))
+            val paths = imagePath.split("|").filter { it.isNotBlank() }
+            for (path in paths) {
+                val imageFile = File(path)
+                if (imageFile.exists() && imageFile.canRead()) {
+                    val bytes = imageFile.readBytes()
+                    val base64Data = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                    val mime = if (path.endsWith(".png", true)) "image/png" else "image/jpeg"
+                    parts.add(Part(inline_data = InlineData(mime_type = mime, data = base64Data)))
+                }
             }
         }
         parts.add(Part(text = prompt))

@@ -1,5 +1,6 @@
 package com.dynamicedgeai
 
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -21,14 +22,19 @@ class ModelManagerActivity : AppCompatActivity() {
     private lateinit var localModelRunner: LocalModelRunner
     private lateinit var modelListContainer: LinearLayout
     private lateinit var txtStorageInfo: TextView
+    private lateinit var txtSummaryTitle: TextView
+    private lateinit var txtSummarySubtitle: TextView
+    private lateinit var summaryBadgePill: TextView
 
     private val cardViews = mutableMapOf<LocalModel, View>()
+    private val expandedCards = mutableSetOf<LocalModel>()
 
     // Handler for periodic UI refresh while downloads are active
     private val refreshHandler = Handler(Looper.getMainLooper())
     private val refreshRunnable = object : Runnable {
         override fun run() {
             refreshDownloadingCards()
+            updateSummaryCard()
             if (DownloadManagerSingleton.hasAnyActiveDownload()) {
                 refreshHandler.postDelayed(this, 500) // refresh every 500ms
             }
@@ -43,18 +49,36 @@ class ModelManagerActivity : AppCompatActivity() {
         localModelRunner = LocalModelRunner.getInstance(this)
         modelListContainer = findViewById(R.id.modelListContainer)
         txtStorageInfo = findViewById(R.id.txtStorageInfo)
+        txtSummaryTitle = findViewById(R.id.txtSummaryTitle)
+        txtSummarySubtitle = findViewById(R.id.txtSummarySubtitle)
+        summaryBadgePill = findViewById(R.id.summaryBadgePill)
 
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener { finish() }
-        findViewById<TextView>(R.id.txtAppVersionModelManager)?.text = "Dynamic Edge AI • ${AppVersion.shortLabel}"
+        findViewById<TextView>(R.id.txtAppVersionModelManager)?.text = "DynamicEdgeAI • ${AppVersion.shortLabel}"
+
+        // Floating Bottom Navigation Bar listeners
+        findViewById<View>(R.id.btnNavChat)?.setOnClickListener {
+            finish()
+        }
+        findViewById<View>(R.id.btnNavModels)?.setOnClickListener {
+            // Already here, smoothly scroll to top
+            findViewById<ScrollView>(R.id.headerModelManager)?.smoothScrollTo(0, 0)
+        }
+        findViewById<View>(R.id.btnNavSettings)?.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            finish()
+        }
 
         buildModelList()
         updateStorageInfo()
+        updateSummaryCard()
     }
 
     override fun onResume() {
         super.onResume()
         refreshAllCards()
         updateStorageInfo()
+        updateSummaryCard()
         // Start periodic refresh if downloads are active
         if (DownloadManagerSingleton.hasAnyActiveDownload()) {
             refreshHandler.post(refreshRunnable)
@@ -75,6 +99,36 @@ class ModelManagerActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateSummaryCard() {
+        var activeDlCount = 0
+        var activeDlModel: LocalModel? = null
+
+        LocalModel.values().forEach { m ->
+            if (DownloadManagerSingleton.isDownloading(m)) {
+                activeDlCount++
+                if (activeDlModel == null) activeDlModel = m
+            }
+        }
+
+        if (activeDlModel != null) {
+            val dl = DownloadManagerSingleton.getActiveDownload(activeDlModel!!)
+            txtSummaryTitle.text = "Downloading ${activeDlModel!!.displayName}..."
+            val progressText = if (dl != null) "${dl.progress}% • ${dl.speedLabel}" else "Downloading..."
+            txtSummarySubtitle.text = progressText
+            summaryBadgePill.text = "⟳ ${dl?.progress ?: 0}%"
+            summaryBadgePill.setBackgroundResource(R.drawable.bg_status_badge_cloud)
+            summaryBadgePill.setTextColor(android.graphics.Color.parseColor("#38BDF8"))
+        } else {
+            val current = localModelRunner.currentModel
+            val isAvail = localModelRunner.isModelAvailable(current)
+            txtSummaryTitle.text = "Active Engine: ${current.displayName}"
+            txtSummarySubtitle.text = if (isAvail) "On-Device LiteRT • Ready for prompt inference" else "Engine selected • Model not downloaded"
+            summaryBadgePill.text = if (isAvail) "● Active" else "● Pending"
+            summaryBadgePill.setBackgroundResource(if (isAvail) R.drawable.bg_status_badge_local else R.drawable.bg_pill_badge)
+            summaryBadgePill.setTextColor(if (isAvail) android.graphics.Color.parseColor("#16A34A") else android.graphics.Color.parseColor("#94A3B8"))
+        }
+    }
+
     private fun buildModelList() {
         modelListContainer.removeAllViews()
         LocalModel.values().forEach { model ->
@@ -90,35 +144,77 @@ class ModelManagerActivity : AppCompatActivity() {
         val cardView = card.findViewById<androidx.cardview.widget.CardView>(R.id.modelCardView)
             ?: (card as? androidx.cardview.widget.CardView)
         val isNight = ThemeManager.isNightMode(this)
+
+        // Morphe-Inspired Deep Tint Palette
         val cardBg = if (isNight) {
             when (model) {
-                LocalModel.GEMMA_4_E4B -> android.graphics.Color.parseColor("#0E3D46") // Deep Teal (like Morphe)
-                LocalModel.Qwen -> android.graphics.Color.parseColor("#1D3E54")        // Slate Blue (like Paresh)
-                LocalModel.GEMMA_2B -> android.graphics.Color.parseColor("#1F3D17")    // Forest Green (like Heval)
-                LocalModel.TINY_LLAMA -> android.graphics.Color.parseColor("#4A152E")  // Plum Burgundy (like HushGram)
+                LocalModel.GEMMA_4_E4B -> android.graphics.Color.parseColor("#10353A") // Teal (Morphe Patches)
+                LocalModel.Qwen -> android.graphics.Color.parseColor("#233B4D")        // Slate Blue (Paresh Patches)
+                LocalModel.GEMMA_2B -> android.graphics.Color.parseColor("#233E18")    // Forest Olive (Heval's Patches)
+                LocalModel.TINY_LLAMA -> android.graphics.Color.parseColor("#4E142B")  // Deep Burgundy (HushGram)
             }
         } else {
             when (model) {
-                LocalModel.GEMMA_4_E4B -> android.graphics.Color.parseColor("#E0F2F1") // Soft Teal
-                LocalModel.Qwen -> android.graphics.Color.parseColor("#E1F0FA")        // Soft Slate Blue
-                LocalModel.GEMMA_2B -> android.graphics.Color.parseColor("#E8F5E9")    // Soft Mint
-                LocalModel.TINY_LLAMA -> android.graphics.Color.parseColor("#FCE4EC")  // Soft Plum
+                LocalModel.GEMMA_4_E4B -> android.graphics.Color.parseColor("#E0F2F1") // Light Teal
+                LocalModel.Qwen -> android.graphics.Color.parseColor("#E1F0FA")        // Light Slate Blue
+                LocalModel.GEMMA_2B -> android.graphics.Color.parseColor("#E8F5E9")    // Light Mint
+                LocalModel.TINY_LLAMA -> android.graphics.Color.parseColor("#FCE4EC")  // Light Rose
             }
         }
         cardView?.setCardBackgroundColor(cardBg)
 
+        // Model Title & Description
         card.findViewById<TextView>(R.id.txtModelName).text = model.displayName
         card.findViewById<TextView>(R.id.txtModelDesc).text = model.description
-        card.findViewById<TextView>(R.id.txtModelSize).text = "Size: ${model.fileSizeLabel}"
 
-        // Recommended badge
+        // Model Specs chips
+        val isAvailable = localModelRunner.isModelAvailable(model)
+        val isActive = localModelRunner.currentModel == model && isAvailable
+
+        val statusLabel = when {
+            isActive -> "Active"
+            isAvailable -> "Downloaded"
+            else -> "Available"
+        }
+        card.findViewById<TextView>(R.id.txtModelSize).text = "${model.fileSizeLabel} • $statusLabel"
+
+        // Status Badge (Verified shield for active/downloaded, Globe/Download for remote)
+        val statusBadge = card.findViewById<ImageView>(R.id.modelStatusBadge)
+        if (isAvailable) {
+            statusBadge.setImageResource(R.drawable.ic_verified_badge)
+            statusBadge.visibility = View.VISIBLE
+        } else {
+            statusBadge.setImageResource(R.drawable.ic_globe_badge)
+            statusBadge.visibility = View.VISIBLE
+        }
+
+        // Recommended & Active badges
         val badgeRecommended = card.findViewById<TextView>(R.id.badgeRecommended)
         badgeRecommended.visibility = if (model.isRecommended) View.VISIBLE else View.GONE
 
-        // Active badge
         val badgeActive = card.findViewById<TextView>(R.id.badgeActive)
-        badgeActive.visibility = if (localModelRunner.currentModel == model &&
-            localModelRunner.isModelAvailable(model)) View.VISIBLE else View.GONE
+        badgeActive.visibility = if (isActive) View.VISIBLE else View.GONE
+
+        // Expand/Collapse behavior
+        val detailsContainer = card.findViewById<View>(R.id.cardDetailsContainer)
+        val chevron = card.findViewById<ImageView>(R.id.btnExpandChevron)
+        val headerArea = card.findViewById<View>(R.id.cardHeaderClickArea)
+
+        val isExpanded = expandedCards.contains(model)
+        detailsContainer.visibility = if (isExpanded) View.VISIBLE else View.GONE
+        chevron.rotation = if (isExpanded) 180f else 0f
+
+        headerArea.setOnClickListener {
+            if (expandedCards.contains(model)) {
+                expandedCards.remove(model)
+                detailsContainer.visibility = View.GONE
+                chevron.animate().rotation(0f).setDuration(200).start()
+            } else {
+                expandedCards.add(model)
+                detailsContainer.visibility = View.VISIBLE
+                chevron.animate().rotation(180f).setDuration(200).start()
+            }
+        }
 
         updateCardStatus(model, card)
     }
@@ -140,8 +236,9 @@ class ModelManagerActivity : AppCompatActivity() {
         val btnUninstall = card.findViewById<View>(R.id.btnUninstall)
         val btnUseModel = card.findViewById<View>(R.id.btnUseModel)
         val badgeActive = card.findViewById<TextView>(R.id.badgeActive)
+        val statusBadge = card.findViewById<ImageView>(R.id.modelStatusBadge)
 
-        // Reset all visibility
+        // Reset all action visibility
         progressContainer.visibility = View.GONE
         btnDownload.visibility = View.GONE
         btnPause.visibility = View.GONE
@@ -152,15 +249,14 @@ class ModelManagerActivity : AppCompatActivity() {
 
         when (status) {
             ModelStatus.NOT_DOWNLOADED -> {
-                txtStatus.text = "↓ Not Downloaded"
-                txtStatus.setTextColor(0xFF999999.toInt())
+                txtStatus.text = "Not Downloaded"
+                statusBadge.setImageResource(R.drawable.ic_globe_badge)
                 btnDownload.visibility = View.VISIBLE
                 btnDownload.setOnClickListener { startDownload(model, false) }
             }
             ModelStatus.DOWNLOADING -> {
                 val activeDl = DownloadManagerSingleton.getActiveDownload(model)
-                txtStatus.text = "⟳ Downloading..."
-                txtStatus.setTextColor(0xFF1E88E5.toInt())
+                txtStatus.text = "Downloading"
                 progressContainer.visibility = View.VISIBLE
                 btnPause.visibility = View.VISIBLE
                 btnCancel.visibility = View.VISIBLE
@@ -187,8 +283,7 @@ class ModelManagerActivity : AppCompatActivity() {
             }
             ModelStatus.PAUSED -> {
                 val activeDl = DownloadManagerSingleton.getActiveDownload(model)
-                txtStatus.text = "⏸ Paused"
-                txtStatus.setTextColor(0xFFFF9800.toInt())
+                txtStatus.text = "Paused"
                 progressContainer.visibility = View.VISIBLE
                 btnPause.visibility = View.VISIBLE
                 btnCancel.visibility = View.VISIBLE
@@ -214,8 +309,8 @@ class ModelManagerActivity : AppCompatActivity() {
                 btnCancel.setOnClickListener { cancelDownload(model) }
             }
             ModelStatus.DOWNLOADED -> {
-                txtStatus.text = "✓ Downloaded"
-                txtStatus.setTextColor(0xFF4CAF50.toInt())
+                txtStatus.text = "Downloaded"
+                statusBadge.setImageResource(R.drawable.ic_verified_badge)
                 btnUninstall.visibility = View.VISIBLE
                 btnUninstall.setOnClickListener { confirmUninstall(model) }
 
@@ -227,9 +322,7 @@ class ModelManagerActivity : AppCompatActivity() {
                 }
             }
             ModelStatus.CORRUPTED -> {
-                txtStatus.text = "⚠ Corrupted (Tap for details)"
-                txtStatus.setTextColor(0xFFF44336.toInt())
-                txtStatus.setOnClickListener { showModelDiagnosticDialog(model) }
+                txtStatus.text = "Corrupted"
                 btnRepair.visibility = View.VISIBLE
                 btnUninstall.visibility = View.VISIBLE
                 btnRepair.setOnClickListener { startDownload(model, false) }
@@ -238,10 +331,6 @@ class ModelManagerActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Refreshes only the cards that have active downloads — called by the periodic handler.
-     * This makes buttons and progress bars dynamic without flickering non-downloading cards.
-     */
     private fun refreshDownloadingCards() {
         LocalModel.values().forEach { model ->
             if (DownloadManagerSingleton.isDownloading(model) || 
@@ -250,7 +339,6 @@ class ModelManagerActivity : AppCompatActivity() {
                 updateCardStatus(model, card)
             }
         }
-        // Also refresh cards that just finished (status changed from downloading to downloaded)
         LocalModel.values().forEach { model ->
             val activeDl = DownloadManagerSingleton.getActiveDownload(model)
             if (activeDl == null) {
@@ -259,6 +347,7 @@ class ModelManagerActivity : AppCompatActivity() {
                 if (currentStatusText.contains("Downloading") || currentStatusText.contains("Paused")) {
                     updateCardStatus(model, card)
                     updateStorageInfo()
+                    updateSummaryCard()
                 }
             }
         }
@@ -267,6 +356,11 @@ class ModelManagerActivity : AppCompatActivity() {
     private fun startDownload(model: LocalModel, resume: Boolean) {
         val destination = localModelRunner.getModelPath(model)
         val card = cardViews[model] ?: return
+
+        // Auto-expand card when download begins so progress is immediately visible
+        expandedCards.add(model)
+        card.findViewById<View>(R.id.cardDetailsContainer)?.visibility = View.VISIBLE
+        card.findViewById<ImageView>(R.id.btnExpandChevron)?.rotation = 180f
 
         DownloadManagerSingleton.startDownload(
             context = this,
@@ -280,6 +374,7 @@ class ModelManagerActivity : AppCompatActivity() {
                 runOnUi {
                     updateCardStatus(model, card)
                     updateStorageInfo()
+                    updateSummaryCard()
                     val fileStatus = localModelRunner.getModelStatus(model)
                     val msg = if (fileStatus == ModelStatus.DOWNLOADED)
                         "${model.displayName} downloaded successfully!"
@@ -291,14 +386,14 @@ class ModelManagerActivity : AppCompatActivity() {
             onError = { error ->
                 runOnUi {
                     updateCardStatus(model, card)
+                    updateSummaryCard()
                     Toast.makeText(this, "Download failed: $error", Toast.LENGTH_LONG).show()
                 }
             }
         )
 
-        // Immediately show download UI
         updateCardStatus(model, card)
-        // Start periodic refresh
+        updateSummaryCard()
         refreshHandler.removeCallbacks(refreshRunnable)
         refreshHandler.post(refreshRunnable)
     }
@@ -310,6 +405,7 @@ class ModelManagerActivity : AppCompatActivity() {
         } else {
             DownloadManagerSingleton.pauseDownload(model)
         }
+        updateSummaryCard()
     }
 
     private fun cancelDownload(model: LocalModel) {
@@ -323,6 +419,7 @@ class ModelManagerActivity : AppCompatActivity() {
         val card = cardViews[model] ?: return
         updateCardStatus(model, card)
         updateStorageInfo()
+        updateSummaryCard()
 
         Toast.makeText(this, "${model.displayName} download cancelled", Toast.LENGTH_SHORT).show()
     }
@@ -336,16 +433,18 @@ class ModelManagerActivity : AppCompatActivity() {
                 val card = cardViews[model] ?: return@setPositiveButton
                 updateCardStatus(model, card)
                 updateStorageInfo()
+                updateSummaryCard()
                 Toast.makeText(this, "${model.displayName} uninstalled", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Cancel", null)
             .show()
-        }
+    }
 
     private fun useModel(model: LocalModel) {
         localModelRunner.switchModel(model)
         Toast.makeText(this, "Switched to ${model.displayName}", Toast.LENGTH_SHORT).show()
         refreshAllCards()
+        updateSummaryCard()
     }
 
     private fun refreshAllCards() {

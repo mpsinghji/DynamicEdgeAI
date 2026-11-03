@@ -24,7 +24,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_alignParentStart="true"
-                android:layout_toStartOf="@+id/btnPlatformGetKey">
+                android:layout_toStartOf="@+id/platformActionButtons">
 
                 <TextView
                     android:id="@+id/txtPlatformName"
@@ -44,19 +44,38 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <Button
-                android:id="@+id/btnPlatformGetKey"
-                style="?android:attr/borderlessButtonStyle"
+            <LinearLayout
+                android:id="@+id/platformActionButtons"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:text="Get Key ↗"
-                android:textColor="@color/accent_blue"
-                android:textSize="11sp"
-                android:minWidth="0dp"
-                android:minHeight="0dp"
-                android:padding="6dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <Button
+                    android:id="@+id/btnPlatformGetKey"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Get Key ↗"
+                    android:textColor="@color/accent_blue"
+                    android:textSize="11sp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:padding="6dp" />
+
+                <ImageButton
+                    android:id="@+id/btnPlatformCloseCard"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_close"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="@color/app_text_muted"
+                    android:padding="6dp"
+                    android:layout_marginStart="4dp"
+                    android:contentDescription="Close" />
+            </LinearLayout>
         </RelativeLayout>
 
         <TextView

@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/app_bg"
     android:fitsSystemWindows="true">
 
@@ -42,7 +41,12 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="16dp">
+        android:layout_below="@id/settingsToolbar"
+        android:clipToPadding="false"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="84dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -304,7 +308,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Section 3: Platform API Keys -->
+            <!-- Section 3: Platform API Keys (Compressed into Dropdown) -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -317,12 +321,63 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="All keys are saved 100% locally on your phone. No keys are hardcoded or sent to third-party servers."
+                android:text="Select a provider from the dropdown to view or configure API keys. All keys remain 100% on your device."
                 android:textColor="@color/app_text_secondary"
                 android:textSize="11sp"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="10dp" />
 
-            <!-- Dynamic Platform Cards Container -->
+            <!-- Compressed Dropdown Selector Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/app_surface_card"
+                android:layout_marginBottom="10dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select Provider to Configure Key:"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_primary"
+                        android:layout_marginBottom="6dp" />
+
+                    <!-- Sleek Spinner Dropdown -->
+                    <Spinner
+                        android:id="@+id/spinnerApiKeyProvider"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:background="@drawable/card_outline"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:spinnerMode="dropdown" />
+
+                    <!-- Quick Status Badges Stream -->
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none"
+                        android:layout_marginTop="10dp">
+
+                        <LinearLayout
+                            android:id="@+id/containerKeyQuickChips"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical" />
+                    </HorizontalScrollView>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Dynamic Platform Card Container (Shown only when provider is selected) -->
             <LinearLayout
                 android:id="@+id/platformCardsContainer"
                 android:layout_width="match_parent"
@@ -446,4 +501,106 @@
 
         </LinearLayout>
     </ScrollView>
-</LinearLayout>
+
+    <!-- Floating Bottom Navigation Dock (Centered Capsule matching Morphe Design) -->
+    <LinearLayout
+        android:id="@+id/floatingBottomDockSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_floating_bottom_bar"
+        android:elevation="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <!-- Chat Tab -->
+        <LinearLayout
+            android:id="@+id/btnNavChatSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_chat"
+                app:tint="@color/app_text_muted" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Chat"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_muted"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+
+        <!-- Models Tab -->
+        <LinearLayout
+            android:id="@+id/btnNavModelsSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_cpu"
+                app:tint="@color/app_text_muted" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Models"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_muted"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+
+        <!-- Settings Tab (Active Highlighted Pill) -->
+        <LinearLayout
+            android:id="@+id/btnNavSettingsCurrent"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:background="@drawable/bg_floating_nav_active">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/accent_blue" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Settings"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent_blue"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+</RelativeLayout>

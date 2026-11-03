@@ -4,14 +4,18 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.util.Log
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.view.inputmethod.EditorInfo
@@ -20,6 +24,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.dynamicedgeai.cloud.CloudModelRunner
 import com.dynamicedgeai.data.*
@@ -93,23 +98,43 @@ class MainActivity : AppCompatActivity() {
     private lateinit var thinkingIndicator: LinearLayout
     private lateinit var thinkingText: TextView
 
-    // Image Attachment UI
+    // Image Attachment UI (Multi-Image & Camera Support)
+    private lateinit var btnCamera: ImageButton
     private lateinit var btnAttachImage: ImageButton
     private lateinit var imagePreviewContainer: LinearLayout
     private lateinit var imgPreviewThumbnail: ImageView
     private lateinit var txtPreviewFilename: TextView
     private lateinit var btnRemoveImage: ImageButton
-    private var selectedAttachmentPath: String? = null
+    private lateinit var btnClearAllImages: TextView
+    private lateinit var containerPreviewThumbnails: LinearLayout
+
+    private val selectedAttachmentPaths = mutableListOf<String>()
+    private var cameraPhotoFile: File? = null
+
+    val selectedAttachmentPath: String?
+        get() = if (selectedAttachmentPaths.isEmpty()) null else selectedAttachmentPaths.joinToString("|")
 
     private var lastKnownState: DeviceState? = null
     private var isSending = false
 
-    // Image Picker Result Contract
+    // Direct Camera Photo Capture Result Contract
+    private val takePictureLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        if (success && cameraPhotoFile != null && cameraPhotoFile!!.exists() && cameraPhotoFile!!.length() > 0) {
+            selectedAttachmentPaths.add(cameraPhotoFile!!.absolutePath)
+            refreshImagePreviews()
+        }
+    }
+
+    // Gallery Multiple Images Picker Contract
     private val imagePickerLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            handleImagePicked(uri)
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri>? ->
+        if (!uris.isNullOrEmpty()) {
+            for (uri in uris) {
+                handleImagePicked(uri)
+            }
         }
     }
 
@@ -141,12 +166,15 @@ class MainActivity : AppCompatActivity() {
         thinkingIndicator = findViewById(R.id.thinkingIndicator)
         thinkingText = findViewById(R.id.thinkingText)
 
-        // Image Attachment UI
+        // Image Attachment UI Elements
+        btnCamera = findViewById(R.id.btnCamera)
         btnAttachImage = findViewById(R.id.btnAttachImage)
         imagePreviewContainer = findViewById(R.id.imagePreviewContainer)
         imgPreviewThumbnail = findViewById(R.id.imgPreviewThumbnail)
         txtPreviewFilename = findViewById(R.id.txtPreviewFilename)
         btnRemoveImage = findViewById(R.id.btnRemoveImage)
+        btnClearAllImages = findViewById(R.id.btnClearAllImages)
+        containerPreviewThumbnails = findViewById(R.id.containerPreviewThumbnails)
 
         // Header Quick Action Buttons
         findViewById<ImageButton>(R.id.btnHeaderNewChat)?.setOnClickListener { startNewConversation() }
@@ -186,12 +214,22 @@ class MainActivity : AppCompatActivity() {
         sendButton.setOnClickListener { trySendMessage() }
         menuButton.setOnClickListener { showBottomSheetMenu() }
 
+        // Camera Quick Action
+        btnCamera.setOnClickListener {
+            launchCamera()
+        }
+
+        // Gallery Quick Action (Multiple selection supported)
         btnAttachImage.setOnClickListener {
             imagePickerLauncher.launch("image/*")
         }
 
         btnRemoveImage.setOnClickListener {
-            clearSelectedImage()
+            clearAllImages()
+        }
+
+        btnClearAllImages.setOnClickListener {
+            clearAllImages()
         }
 
         messageInput.setOnEditorActionListener { _, actionId, event ->
@@ -212,10 +250,27 @@ class MainActivity : AppCompatActivity() {
         loadOrCreateInitialConversation()
     }
 
+    private fun launchCamera() {
+        try {
+            val attachmentsDir = File(filesDir, "attachments").apply { mkdirs() }
+            val photoFile = File(attachmentsDir, "cam_${System.currentTimeMillis()}.jpg")
+            cameraPhotoFile = photoFile
+            val photoUri = FileProvider.getUriForFile(
+                this,
+                "${applicationContext.packageName}.fileprovider",
+                photoFile
+            )
+            takePictureLauncher.launch(photoUri)
+        } catch (e: Exception) {
+            Log.e(tag, "Failed to launch camera", e)
+            Toast.makeText(this, "Failed to start camera: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun handleImagePicked(uri: Uri) {
         try {
             val attachmentsDir = File(filesDir, "attachments").apply { mkdirs() }
-            val destFile = File(attachmentsDir, "img_${System.currentTimeMillis()}.jpg")
+            val destFile = File(attachmentsDir, "img_${System.currentTimeMillis()}_${java.util.Random().nextInt(1000)}.jpg")
             
             contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(destFile).use { output ->
@@ -224,11 +279,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (destFile.exists() && destFile.length() > 0) {
-                selectedAttachmentPath = destFile.absolutePath
-                val bitmap = BitmapFactory.decodeFile(destFile.absolutePath)
-                imgPreviewThumbnail.setImageBitmap(bitmap)
-                txtPreviewFilename.text = destFile.name
-                imagePreviewContainer.visibility = View.VISIBLE
+                selectedAttachmentPaths.add(destFile.absolutePath)
+                refreshImagePreviews()
             }
         } catch (e: Exception) {
             Log.e(tag, "Failed to copy picked image", e)
@@ -236,10 +288,97 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun clearSelectedImage() {
-        selectedAttachmentPath = null
+    private fun refreshImagePreviews() {
+        if (selectedAttachmentPaths.isEmpty()) {
+            imagePreviewContainer.visibility = View.GONE
+            containerPreviewThumbnails.removeAllViews()
+            return
+        }
+
+        imagePreviewContainer.visibility = View.VISIBLE
+        val count = selectedAttachmentPaths.size
+        txtPreviewFilename.text = "$count image${if (count > 1) "s" else ""} attached"
+        containerPreviewThumbnails.removeAllViews()
+
+        for (path in ArrayList(selectedAttachmentPaths)) {
+            val file = File(path)
+            if (!file.exists()) continue
+
+            val frame = FrameLayout(this).apply {
+                val params = LinearLayout.LayoutParams(
+                    (54 * resources.displayMetrics.density).toInt(),
+                    (54 * resources.displayMetrics.density).toInt()
+                ).apply {
+                    setMargins(0, 0, (8 * resources.displayMetrics.density).toInt(), 0)
+                }
+                layoutParams = params
+            }
+
+            val iv = ImageView(this).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                setBackgroundResource(R.drawable.card_outline)
+                clipToOutline = true
+                val bmp = decodeSampledBitmap(path, 120, 120)
+                if (bmp != null) setImageBitmap(bmp)
+            }
+            frame.addView(iv)
+
+            val btnClose = ImageButton(this).apply {
+                val closeParams = FrameLayout.LayoutParams(
+                    (20 * resources.displayMetrics.density).toInt(),
+                    (20 * resources.displayMetrics.density).toInt()
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.END
+                }
+                layoutParams = closeParams
+                setImageResource(R.drawable.ic_close)
+                setColorFilter(0xFFFFFFFF.toInt())
+                setBackgroundResource(R.drawable.bg_circular_action_btn)
+                backgroundTintList = ColorStateList.valueOf(0xCCDC2626.toInt())
+                setPadding(4, 4, 4, 4)
+                setOnClickListener {
+                    selectedAttachmentPaths.remove(path)
+                    refreshImagePreviews()
+                }
+            }
+            frame.addView(btnClose)
+
+            containerPreviewThumbnails.addView(frame)
+        }
+    }
+
+    private fun decodeSampledBitmap(path: String, reqWidth: Int, reqHeight: Int): Bitmap? {
+        return try {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, options)
+            var inSampleSize = 1
+            if (options.outHeight > reqHeight || options.outWidth > reqWidth) {
+                val halfHeight = options.outHeight / 2
+                val halfWidth = options.outWidth / 2
+                while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                    inSampleSize *= 2
+                }
+            }
+            options.inSampleSize = inSampleSize
+            options.inJustDecodeBounds = false
+            BitmapFactory.decodeFile(path, options)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun clearAllImages() {
+        selectedAttachmentPaths.clear()
         imagePreviewContainer.visibility = View.GONE
-        imgPreviewThumbnail.setImageDrawable(null)
+        containerPreviewThumbnails.removeAllViews()
+    }
+
+    private fun clearSelectedImage() {
+        clearAllImages()
     }
 
     // ── Multi-Conversation Architecture ──────────────────────────────────────
@@ -519,7 +658,8 @@ class MainActivity : AppCompatActivity() {
         val imagePath = selectedAttachmentPath
 
         if (text.isNotBlank() || !imagePath.isNullOrBlank()) {
-            val promptText = if (text.isNotBlank()) text else "Analyze this image."
+            val count = selectedAttachmentPaths.size
+            val promptText = if (text.isNotBlank()) text else if (count > 1) "Analyze these images." else "Analyze this image."
 
             // Multimodal capability validation
             if (!imagePath.isNullOrBlank()) {
@@ -547,7 +687,7 @@ class MainActivity : AppCompatActivity() {
             isSending = true
             sendButton.isEnabled = false
             messageInput.text.clear()
-            clearSelectedImage()
+            clearAllImages()
 
             handleUserMessage(promptText, imagePath)
         }
@@ -729,15 +869,41 @@ class MainActivity : AppCompatActivity() {
         val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
         view.findViewById<TextView>(R.id.timestamp).text = timeStr
 
-        // Attached image preview in chat
-        val imgView = view.findViewById<ImageView>(R.id.userAttachedImage)
-        if (!message.attachmentPath.isNullOrBlank()) {
-            val file = File(message.attachmentPath)
-            if (file.exists()) {
-                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-                imgView.setImageBitmap(bitmap)
-                imgView.visibility = View.VISIBLE
+        // Attached image(s) preview in chat (supports single and multiple images)
+        val paths = message.attachmentPath?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
+        val imgSingle = view.findViewById<ImageView>(R.id.userAttachedImage)
+        val imgScroll = view.findViewById<HorizontalScrollView>(R.id.userAttachedImagesScroll)
+        val imgContainer = view.findViewById<LinearLayout>(R.id.userAttachedImagesContainer)
+
+        if (paths.size == 1) {
+            imgSingle?.visibility = View.VISIBLE
+            imgScroll?.visibility = View.GONE
+            val bmp = decodeSampledBitmap(paths[0], 400, 300)
+            if (bmp != null) imgSingle?.setImageBitmap(bmp)
+        } else if (paths.size > 1) {
+            imgSingle?.visibility = View.GONE
+            imgScroll?.visibility = View.VISIBLE
+            imgContainer?.removeAllViews()
+            for (p in paths) {
+                val iv = ImageView(this).apply {
+                    val lp = LinearLayout.LayoutParams(
+                        (110 * resources.displayMetrics.density).toInt(),
+                        (110 * resources.displayMetrics.density).toInt()
+                    ).apply {
+                        setMargins(0, 0, (8 * resources.displayMetrics.density).toInt(), 0)
+                    }
+                    layoutParams = lp
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    setBackgroundResource(R.drawable.card_outline)
+                    clipToOutline = true
+                    val bmp = decodeSampledBitmap(p, 200, 200)
+                    if (bmp != null) setImageBitmap(bmp)
+                }
+                imgContainer?.addView(iv)
             }
+        } else {
+            imgSingle?.visibility = View.GONE
+            imgScroll?.visibility = View.GONE
         }
 
         // Copy button

@@ -2,6 +2,41 @@
 
 ---
 
+## 🚀 Version 1.1.8 (Build 10) — 2026-11-03
+**Status:** Deployed via Wireless ADB / Ready for GitHub Release  
+**Package:** `com.dynamicedgeai`  
+**Target SDK:** 36 (Android 15+) | **Min SDK:** 26 (Android 8.0 Oreo)  
+**Git Tag:** `v1.1.8`  
+**Build Variant:** `release` (compatible debug-signature for seamless in-place updates)  
+**Release APK Filename:** `DynamicEdgeAI-v1.1.8-release.apk`  
+**Release APK SHA-256:** `A30A164311D1847BC8CC31B4DB4EB454C855E2E1597A41B2F355BF1FEAFC2156`  
+**Signing Certificate SHA-256:** `0940e42a8cbf0746bf7d48358eb0afbf43b77dcf0c4580069867370436893645` (CN=Android Debug)  
+
+### 🌟 New Features & Enhancements
+- **Full Morphe / ReVanced Manager Design System:**
+  - **Expandable Tinted Model Cards:** Redesigned model cards to match Morphe Manager:
+    - 24dp rounded corners with distinct dark tints (Teal for Gemma 4, Slate Blue for Qwen, Olive Green for Gemma 2B, Plum Burgundy for TinyLlama).
+    - 48dp circular avatar icons with overlapping status badges (Verified shield badge `✓` for active/downloaded, globe badge `🌐` for remote).
+    - Interactive header with down chevron `⌄` that smoothly rotates 180° when expanding/collapsing.
+    - Expandable specifications tray with RAM requirement pills, quantized format badges, and context size.
+  - **Top Summary / Sync Status Banner:**
+    - Live active engine banner displaying current on-device LiteRT status, pulsing dot, and storage capacity.
+    - Dynamic download state monitor showing progress percentage, speed, and ETA in real time.
+  - **Floating Bottom Capsule Dock:**
+    - Added floating pill navigation dock (`[ Chat ]` `[ Models ]` `[ Settings ]`) across Model Manager and Settings screens for instant fluid switching.
+- **Flawless Markdown Formatter (Zero Stray Asterisks):**
+  - Upgraded `MarkdownFormatter.kt` with a final sweeping cleanup pass that eliminates all orphan asterisks `*` and `**`.
+  - Ensures clean bullet points (`• `), bold headings, italics, and code blocks with zero syntax leakage.
+- **Hardware Camera Capture & Multi-Image Pipeline:**
+  - Integrated dedicated `FileProvider` camera capture button in bottom input bar.
+  - Multi-image gallery selection and multi-thumbnail preview bar with removal chips.
+  - Full multimodal inference support across Google Gemini and on-device LiteRT.
+- **Compressed Client-Side API Key Dropdown in Settings:**
+  - Replaced stacked cards with a compact dropdown selector and quick provider status chips (`Gemini: ✓`, etc.).
+  - 100% client-side `EncryptedSharedPreferences` storage.
+
+---
+
 ## 🚀 Version 1.1.6 (Build 8) — 2026-11-03
 **Status:** Deployed via Wireless ADB / Ready for GitHub Release  
 **Package:** `com.dynamicedgeai`  

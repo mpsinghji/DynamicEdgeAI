@@ -251,11 +251,23 @@ class LocalModelRunner private constructor(context: Context) {
 
     private fun cleanGemmaResponse(raw: String): String {
         var r = raw
+        // Truncate at the very first occurrence of any stop/control token
+        val stopTokens = listOf("<end_of_turn>", "<turn|>", "<eos>")
+        for (st in stopTokens) {
+            val idx = r.indexOf(st)
+            if (idx != -1) {
+                r = r.substring(0, idx)
+            }
+        }
         listOf(
             "<end_of_turn>",
             "<start_of_turn>model",
             "<start_of_turn>user",
-            "<start_of_turn>"
+            "<start_of_turn>",
+            "<turn|>",
+            "<eos>",
+            "<bos>",
+            "<pad>"
         ).forEach { r = r.replace(it, "") }
         r = r.replace(Regex("\n{3,}"), "\n\n").trim()
         val paras = r.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }
@@ -316,12 +328,15 @@ class LocalModelRunner private constructor(context: Context) {
                         .build()
                     val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
                     try {
-                        val imgFile = File(imagePath!!)
-                        if (imgFile.exists() && imgFile.canRead()) {
-                            val bitmap = BitmapFactory.decodeFile(imagePath)
-                            if (bitmap != null) {
-                                val mpImage = BitmapImageBuilder(bitmap).build()
-                                session.addImage(mpImage)
+                        val paths = imagePath.split("|").filter { it.isNotBlank() }
+                        for (path in paths) {
+                            val imgFile = File(path)
+                            if (imgFile.exists() && imgFile.canRead()) {
+                                val bitmap = BitmapFactory.decodeFile(path)
+                                if (bitmap != null) {
+                                    val mpImage = BitmapImageBuilder(bitmap).build()
+                                    session.addImage(mpImage)
+                                }
                             }
                         }
                         val formatted = applyGemmaTemplate(latestPrompt)

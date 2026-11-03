@@ -1,10 +1,12 @@
 package com.dynamicedgeai
 
 import android.content.Intent
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -25,6 +27,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var radioGroupProviders: RadioGroup
     private lateinit var platformCardsContainer: LinearLayout
+    private lateinit var spinnerApiKeyProvider: Spinner
+    private lateinit var containerKeyQuickChips: LinearLayout
     private lateinit var switchSettingsMemory: Switch
     private lateinit var memoryManager: MemoryManager
 
@@ -39,18 +43,176 @@ class SettingsActivity : AppCompatActivity() {
             finish()
         }
 
+        // Floating Bottom Navigation Bar
+        findViewById<View>(R.id.btnNavChatSettings)?.setOnClickListener {
+            finish()
+        }
+        findViewById<View>(R.id.btnNavModelsSettings)?.setOnClickListener {
+            startActivity(android.content.Intent(this, ModelManagerActivity::class.java))
+            finish()
+        }
+        findViewById<View>(R.id.btnNavSettingsCurrent)?.setOnClickListener {
+            findViewById<ScrollView>(R.id.settingsToolbar)?.smoothScrollTo(0, 0)
+        }
+
         findViewById<TextView>(R.id.txtSettingsAppVersion).text = "DynamicEdgeAI • ${AppVersion.label}"
 
         radioGroupProviders = findViewById(R.id.radioGroupProviders)
         platformCardsContainer = findViewById(R.id.platformCardsContainer)
+        spinnerApiKeyProvider = findViewById(R.id.spinnerApiKeyProvider)
+        containerKeyQuickChips = findViewById(R.id.containerKeyQuickChips)
         switchSettingsMemory = findViewById(R.id.switchSettingsMemory)
 
         setupThemeRadioGroup()
         setupInferenceOverrideRadioGroup()
         setupProviderRadioGroup()
-        renderPlatformCards()
+        setupApiKeyDropdown()
         setupMemoryControls()
         setupCheckForUpdatesButton()
+    }
+
+    private fun setupApiKeyDropdown() {
+        refreshQuickChips()
+
+        val platforms = PlatformType.values()
+        val options = mutableListOf("Select Provider to Configure Key... ▾")
+        platforms.forEach { p ->
+            val status = if (ApiKeyManager.hasApiKey(this, p)) " [✓ Configured]" else ""
+            options.add("${p.displayName}$status")
+        }
+
+        val isNight = ThemeManager.isNightMode(this)
+        val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, options) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val v = super.getView(position, convertView, parent) as TextView
+                v.setTextColor(if (isNight) 0xFFF1F5F9.toInt() else 0xFF0F172A.toInt())
+                v.textSize = 13f
+                return v
+            }
+
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val v = super.getDropDownView(position, convertView, parent) as TextView
+                v.setTextColor(if (isNight) 0xFFF1F5F9.toInt() else 0xFF0F172A.toInt())
+                v.setBackgroundColor(if (isNight) 0xFF1E293B.toInt() else 0xFFFFFFFF.toInt())
+                v.setPadding(24, 20, 24, 20)
+                v.textSize = 13f
+                return v
+            }
+        }
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerApiKeyProvider.adapter = adapter
+
+        spinnerApiKeyProvider.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (position == 0) {
+                    platformCardsContainer.removeAllViews()
+                } else {
+                    renderSinglePlatformCard(platforms[position - 1])
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                platformCardsContainer.removeAllViews()
+            }
+        }
+    }
+
+    private fun refreshQuickChips() {
+        containerKeyQuickChips.removeAllViews()
+        val isNight = ThemeManager.isNightMode(this)
+        PlatformType.values().forEachIndexed { index, platform ->
+            val hasKey = ApiKeyManager.hasApiKey(this, platform)
+            val chip = TextView(this).apply {
+                text = "${platform.displayName.split(" ").first()}: ${if (hasKey) "✓" else "—"}"
+                textSize = 11f
+                setTypeface(null, if (hasKey) Typeface.BOLD else Typeface.NORMAL)
+                setTextColor(if (hasKey) 0xFF16A34A.toInt() else if (isNight) 0xFF94A3B8.toInt() else 0xFF64748B.toInt())
+                setBackgroundResource(if (hasKey) R.drawable.bg_status_badge_local else R.drawable.card_outline)
+                setPadding(16, 8, 16, 8)
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, (6 * resources.displayMetrics.density).toInt(), 0)
+                }
+                layoutParams = params
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    spinnerApiKeyProvider.setSelection(index + 1)
+                }
+            }
+            containerKeyQuickChips.addView(chip)
+        }
+    }
+
+    private fun renderSinglePlatformCard(platform: PlatformType) {
+        platformCardsContainer.removeAllViews()
+        val cardView = layoutInflater.inflate(R.layout.item_setting_platform, platformCardsContainer, false)
+
+        val txtName = cardView.findViewById<TextView>(R.id.txtPlatformName)
+        val txtModel = cardView.findViewById<TextView>(R.id.txtPlatformModel)
+        val txtStatus = cardView.findViewById<TextView>(R.id.txtPlatformKeyStatus)
+        val btnGetKey = cardView.findViewById<Button>(R.id.btnPlatformGetKey)
+        val btnCloseCard = cardView.findViewById<ImageButton>(R.id.btnPlatformCloseCard)
+        val btnClear = cardView.findViewById<Button>(R.id.btnPlatformClear)
+        val btnConfigure = cardView.findViewById<Button>(R.id.btnPlatformConfigure)
+
+        txtName.text = platform.displayName
+        txtModel.text = "Default Model: ${platform.defaultModel}"
+
+        fun updateStatus() {
+            val hasKey = ApiKeyManager.hasApiKey(this, platform)
+            if (hasKey) {
+                val masked = ApiKeyManager.getMaskedApiKey(this, platform)
+                txtStatus.text = "● Key Configured: $masked"
+                txtStatus.setTextColor(0xFF2E7D32.toInt())
+                btnClear.visibility = View.VISIBLE
+                btnConfigure.text = "Edit Key"
+            } else {
+                txtStatus.text = "○ Key not configured"
+                txtStatus.setTextColor(0xFF757575.toInt())
+                btnClear.visibility = View.GONE
+                btnConfigure.text = "Add Key"
+            }
+            refreshQuickChips()
+        }
+
+        updateStatus()
+
+        btnGetKey.setOnClickListener {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(platform.consoleUrl))
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Unable to open browser: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        btnCloseCard?.setOnClickListener {
+            spinnerApiKeyProvider.setSelection(0)
+            platformCardsContainer.removeAllViews()
+        }
+
+        btnClear.setOnClickListener {
+            ApiKeyManager.clearApiKey(this, platform)
+            updateStatus()
+            setupApiKeyDropdown()
+            Toast.makeText(this, "${platform.displayName} key cleared", Toast.LENGTH_SHORT).show()
+        }
+
+        btnConfigure.setOnClickListener {
+            showEditKeyDialog(platform) {
+                updateStatus()
+                setupApiKeyDropdown()
+            }
+        }
+
+        platformCardsContainer.addView(cardView)
+    }
+
+    private fun renderPlatformCards() {
+        setupApiKeyDropdown()
     }
 
     private fun setupThemeRadioGroup() {
@@ -156,64 +318,7 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderPlatformCards() {
-        platformCardsContainer.removeAllViews()
 
-        PlatformType.values().forEach { platform ->
-            val cardView = layoutInflater.inflate(R.layout.item_setting_platform, platformCardsContainer, false)
-
-            val txtName = cardView.findViewById<TextView>(R.id.txtPlatformName)
-            val txtModel = cardView.findViewById<TextView>(R.id.txtPlatformModel)
-            val txtStatus = cardView.findViewById<TextView>(R.id.txtPlatformKeyStatus)
-            val btnGetKey = cardView.findViewById<Button>(R.id.btnPlatformGetKey)
-            val btnClear = cardView.findViewById<Button>(R.id.btnPlatformClear)
-            val btnConfigure = cardView.findViewById<Button>(R.id.btnPlatformConfigure)
-
-            txtName.text = platform.displayName
-            txtModel.text = "Default Model: ${platform.defaultModel}"
-
-            fun updateStatus() {
-                val hasKey = ApiKeyManager.hasApiKey(this, platform)
-                if (hasKey) {
-                    val masked = ApiKeyManager.getMaskedApiKey(this, platform)
-                    txtStatus.text = "● Key Configured: $masked"
-                    txtStatus.setTextColor(0xFF2E7D32.toInt())
-                    btnClear.visibility = View.VISIBLE
-                    btnConfigure.text = "Edit Key"
-                } else {
-                    txtStatus.text = "○ Key not configured"
-                    txtStatus.setTextColor(0xFF757575.toInt())
-                    btnClear.visibility = View.GONE
-                    btnConfigure.text = "Add Key"
-                }
-            }
-
-            updateStatus()
-
-            btnGetKey.setOnClickListener {
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(platform.consoleUrl))
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Unable to open browser: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            btnClear.setOnClickListener {
-                ApiKeyManager.clearApiKey(this, platform)
-                updateStatus()
-                Toast.makeText(this, "${platform.displayName} key cleared", Toast.LENGTH_SHORT).show()
-            }
-
-            btnConfigure.setOnClickListener {
-                showEditKeyDialog(platform) {
-                    updateStatus()
-                }
-            }
-
-            platformCardsContainer.addView(cardView)
-        }
-    }
 
     private fun showEditKeyDialog(platform: PlatformType, onSaved: () -> Unit) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_api_key, null)

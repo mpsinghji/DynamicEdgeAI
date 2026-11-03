@@ -21,6 +21,7 @@
         android:paddingBottom="8dp"
         android:orientation="vertical">
 
+        <!-- Single Image Display (when 1 image attached) -->
         <ImageView
             android:id="@+id/userAttachedImage"
             android:layout_width="200dp"
@@ -28,6 +29,22 @@
             android:scaleType="centerCrop"
             android:layout_marginBottom="8dp"
             android:visibility="gone" />
+
+        <!-- Multi-Image Display (when multiple images attached) -->
+        <HorizontalScrollView
+            android:id="@+id/userAttachedImagesScroll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/userAttachedImagesContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
 
         <TextView
             android:id="@+id/messageText"
