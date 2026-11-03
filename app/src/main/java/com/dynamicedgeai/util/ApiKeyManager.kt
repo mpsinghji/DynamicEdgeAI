@@ -57,6 +57,21 @@ enum class PlatformType(
 }
 
 /**
+ * Inference routing override options configured in Settings.
+ */
+enum class InferenceOverrideMode(val id: String, val displayName: String) {
+    OFF("off", "Adaptive (Auto Engine)"),
+    LOCAL("local", "Force Local (Edge AI)"),
+    CLOUD("cloud", "Force Cloud AI");
+
+    companion object {
+        fun fromId(id: String): InferenceOverrideMode {
+            return values().firstOrNull { it.id.equals(id, ignoreCase = true) } ?: OFF
+        }
+    }
+}
+
+/**
  * Manages user-configured API keys for Cloud AI services across multiple platforms.
  * All keys and platform selections are stored 100% client-side in SharedPreferences.
  */
@@ -64,6 +79,7 @@ object ApiKeyManager {
 
     private const val PREFS_NAME = "dynamicedgeai_settings"
     private const val KEY_ACTIVE_PLATFORM = "active_cloud_platform"
+    private const val KEY_INFERENCE_OVERRIDE = "inference_override_mode"
     private const val PREFIX_PLATFORM_KEY = "api_key_platform_"
     private const val PREFIX_CUSTOM_MODEL = "custom_model_platform_"
 
@@ -84,6 +100,21 @@ object ApiKeyManager {
      */
     fun setActivePlatform(context: Context, platform: PlatformType) {
         getPrefs(context).edit().putString(KEY_ACTIVE_PLATFORM, platform.id).apply()
+    }
+
+    /**
+     * Gets the user's inference override preference (OFF = Adaptive, LOCAL = Edge, CLOUD = Cloud).
+     */
+    fun getInferenceOverride(context: Context): InferenceOverrideMode {
+        val id = getPrefs(context).getString(KEY_INFERENCE_OVERRIDE, InferenceOverrideMode.OFF.id) ?: InferenceOverrideMode.OFF.id
+        return InferenceOverrideMode.fromId(id)
+    }
+
+    /**
+     * Sets the user's inference override preference.
+     */
+    fun setInferenceOverride(context: Context, mode: InferenceOverrideMode) {
+        getPrefs(context).edit().putString(KEY_INFERENCE_OVERRIDE, mode.id).apply()
     }
 
     /**

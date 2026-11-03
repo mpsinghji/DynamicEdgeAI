@@ -10,8 +10,11 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.dynamicedgeai.data.MemoryManager
+import com.dynamicedgeai.updater.AppUpdateManager
+import com.dynamicedgeai.updater.UpdateState
 import com.dynamicedgeai.util.ApiKeyManager
 import com.dynamicedgeai.util.AppVersion
+import com.dynamicedgeai.util.InferenceOverrideMode
 import com.dynamicedgeai.util.PlatformType
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
@@ -39,9 +42,70 @@ class SettingsActivity : AppCompatActivity() {
         platformCardsContainer = findViewById(R.id.platformCardsContainer)
         switchSettingsMemory = findViewById(R.id.switchSettingsMemory)
 
+        setupInferenceOverrideRadioGroup()
         setupProviderRadioGroup()
         renderPlatformCards()
         setupMemoryControls()
+        setupCheckForUpdatesButton()
+    }
+
+    private fun setupInferenceOverrideRadioGroup() {
+        val radioGroup = findViewById<RadioGroup>(R.id.radioGroupInferenceOverride)
+        val currentOverride = ApiKeyManager.getInferenceOverride(this)
+        when (currentOverride) {
+            InferenceOverrideMode.OFF -> findViewById<RadioButton>(R.id.radioOverrideOff).isChecked = true
+            InferenceOverrideMode.LOCAL -> findViewById<RadioButton>(R.id.radioOverrideLocal).isChecked = true
+            InferenceOverrideMode.CLOUD -> findViewById<RadioButton>(R.id.radioOverrideCloud).isChecked = true
+        }
+
+        radioGroup.setOnCheckedChangeListener { _, checkedId ->
+            val mode = when (checkedId) {
+                R.id.radioOverrideLocal -> InferenceOverrideMode.LOCAL
+                R.id.radioOverrideCloud -> InferenceOverrideMode.CLOUD
+                else -> InferenceOverrideMode.OFF
+            }
+            ApiKeyManager.setInferenceOverride(this, mode)
+            Toast.makeText(this, "Strategy: ${mode.displayName}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun setupCheckForUpdatesButton() {
+        val btnCheck = findViewById<Button>(R.id.btnSettingsCheckUpdates)
+        val txtStatus = findViewById<TextView>(R.id.txtSettingsUpdateStatus)
+
+        btnCheck?.setOnClickListener {
+            txtStatus.visibility = View.VISIBLE
+            txtStatus.text = "Checking GitHub Releases..."
+            btnCheck.isEnabled = false
+
+            lifecycleScope.launch {
+                AppUpdateManager.getInstance().checkForUpdate(this@SettingsActivity)
+                when (val state = AppUpdateManager.getInstance().updateState.value) {
+                    is UpdateState.UpToDate -> {
+                        txtStatus.text = "✓ You are running the latest version (${AppVersion.shortLabel})"
+                        Toast.makeText(this@SettingsActivity, "App is up to date (${AppVersion.shortLabel})", Toast.LENGTH_SHORT).show()
+                    }
+                    is UpdateState.UpdateAvailable -> {
+                        txtStatus.text = "⚡ New version available: v${state.info.versionName}"
+                        AlertDialog.Builder(this@SettingsActivity)
+                            .setTitle("Update Available")
+                            .setMessage("Version ${state.info.versionName} (${state.info.formattedSize}) is ready to download.\n\n${state.info.releaseNotes}")
+                            .setPositiveButton("Download & Install") { _, _ ->
+                                lifecycleScope.launch {
+                                    AppUpdateManager.getInstance().downloadUpdate(this@SettingsActivity, state.info)
+                                }
+                            }
+                            .setNegativeButton("Later", null)
+                            .show()
+                    }
+                    is UpdateState.Error -> {
+                        txtStatus.text = "⚠️ Update check failed: ${state.message}"
+                    }
+                    else -> {}
+                }
+                btnCheck.isEnabled = true
+            }
+        }
     }
 
     private fun setupProviderRadioGroup() {

@@ -25,7 +25,8 @@ class MessageRouter(
         isPrivacyModeOn: Boolean, 
         state: DeviceState,
         imagePath: String? = null,
-        providedHistory: List<ChatMessage>? = null
+        providedHistory: List<ChatMessage>? = null,
+        overrideMode: com.dynamicedgeai.util.InferenceOverrideMode = com.dynamicedgeai.util.InferenceOverrideMode.OFF
     ): RouterResult {
         // Use provided conversation history or internal buffer
         val historyToUse = if (providedHistory != null) {
@@ -35,10 +36,21 @@ class MessageRouter(
             internalHistory.takeLast(MAX_HISTORY).toMutableList()
         }
 
-        var strategyDetail = if (isPrivacyModeOn) {
-            StrategyDetail(Strategy.LOCAL, "Privacy Mode ON (User override)")
-        } else {
-            decisionEngine.determineStrategy(state)
+        val effectivePrivacy = isPrivacyModeOn || overrideMode == com.dynamicedgeai.util.InferenceOverrideMode.LOCAL
+
+        var strategyDetail = when {
+            overrideMode == com.dynamicedgeai.util.InferenceOverrideMode.LOCAL -> {
+                StrategyDetail(Strategy.LOCAL, "Settings Override: Forced LOCAL / Edge AI")
+            }
+            overrideMode == com.dynamicedgeai.util.InferenceOverrideMode.CLOUD -> {
+                StrategyDetail(Strategy.CLOUD, "Settings Override: Forced CLOUD AI")
+            }
+            isPrivacyModeOn -> {
+                StrategyDetail(Strategy.LOCAL, "Privacy Mode ON (User override)")
+            }
+            else -> {
+                decisionEngine.determineStrategy(state)
+            }
         }
 
         // Multimodal Image Input Check
@@ -46,7 +58,7 @@ class MessageRouter(
         if (hasImage) {
             val localSupportsImage = ModelCapabilityRegistry.supportsImage(localModelRunner.currentModel)
 
-            if (isPrivacyModeOn && !localSupportsImage) {
+            if (effectivePrivacy && !localSupportsImage) {
                 return RouterResult(
                     "⚠️ The selected local model (${localModelRunner.currentModel.displayName}) is text-only and does not support image analysis.\n\n" +
                             "To analyse images, please switch to Gemma 4 E4B-it (LiteRT-LM) or turn off Privacy Mode to use Gemini 1.5 Flash.",
@@ -54,7 +66,7 @@ class MessageRouter(
                 )
             }
 
-            if (!isPrivacyModeOn && !localSupportsImage) {
+            if (!effectivePrivacy && !localSupportsImage) {
                 // Auto-route to cloud Gemini for multimodal image recognition
                 strategyDetail = StrategyDetail(Strategy.CLOUD, "Routing to Cloud: Image analysis required and local model is text-only")
             }
@@ -69,7 +81,7 @@ class MessageRouter(
                 if (available != null) {
                     localModelRunner.switchModel(available)
                     Log.d("MessageRouter", "Auto-switched to ${available.displayName} (current model unavailable)")
-                } else if (isPrivacyModeOn) {
+                } else if (effectivePrivacy) {
                     return RouterResult(
                         "⚠️ No local model is available. Please download a model from the Model Manager to use on-device inference.",
                         StrategyDetail(Strategy.LOCAL, "No local model available — download required")

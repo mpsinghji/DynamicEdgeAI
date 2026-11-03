@@ -276,7 +276,12 @@ class MainActivity : AppCompatActivity() {
             .putString("last_active_conv_id", conv.conversationId)
             .apply()
 
-        findViewById<TextView>(R.id.appTitleText)?.text = if (conv.title != "New Chat") conv.title else "Adaptive Edge AI"
+        findViewById<TextView>(R.id.appTitleText)?.text = "DynamicEdgeAI"
+        findViewById<TextView>(R.id.appSubtitleText)?.text = if (conv.title != "New Chat") {
+            "${conv.title} • ${AppVersion.shortLabel}"
+        } else {
+            "Edge & Cloud Intelligence • ${AppVersion.shortLabel}"
+        }
         loadMessagesForActiveConversation()
     }
 
@@ -370,27 +375,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showRenameConversationDialog(conv: ConversationEntity, onDone: () -> Unit) {
-        val input = EditText(this).apply {
-            setText(conv.title)
-            setSelection(text.length)
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Rename Conversation")
-            .setView(input)
-            .setPositiveButton("Save") { _, _ ->
-                val newTitle = input.text.toString().trim()
-                if (newTitle.isNotBlank()) {
-                    lifecycleScope.launch {
-                        conversationRepo.updateConversationTitle(conv.conversationId, newTitle)
-                        if (conv.conversationId == activeConversation?.conversationId) {
-                            findViewById<TextView>(R.id.appTitleText)?.text = newTitle
-                        }
-                        onDone()
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_prompt, null)
+        val txtTitle = dialogView.findViewById<TextView>(R.id.dialogTitle)
+        val txtSubtitle = dialogView.findViewById<TextView>(R.id.dialogSubtitle)
+        val editInput = dialogView.findViewById<EditText>(R.id.dialogEditInput)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnDialogCancel)
+        val btnConfirm = dialogView.findViewById<Button>(R.id.btnDialogConfirm)
+
+        txtTitle.text = "Rename Conversation"
+        txtSubtitle.text = "Enter a title for this conversation thread."
+        editInput.setText(conv.title)
+        editInput.setSelection(editInput.text.length)
+        editInput.minLines = 1
+        editInput.maxLines = 2
+        btnConfirm.text = "Save"
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            val newTitle = editInput.text.toString().trim()
+            if (newTitle.isNotBlank()) {
+                lifecycleScope.launch {
+                    conversationRepo.updateConversationTitle(conv.conversationId, newTitle)
+                    if (conv.conversationId == activeConversation?.conversationId) {
+                        findViewById<TextView>(R.id.appSubtitleText)?.text = "$newTitle • ${AppVersion.shortLabel}"
                     }
+                    dialog.dismiss()
+                    onDone()
                 }
+            } else {
+                dialog.dismiss()
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
+
+        dialog.show()
     }
 
     private fun showDeleteConversationDialog(conv: ConversationEntity, onDone: () -> Unit) {
@@ -566,7 +589,7 @@ class MainActivity : AppCompatActivity() {
                 if (conv.title == "New Chat") {
                     val autoTitle = text.take(28).trim().replace("\n", " ") + (if (text.length > 28) "…" else "")
                     conversationRepo.updateConversationTitle(conv.conversationId, autoTitle)
-                    findViewById<TextView>(R.id.appTitleText)?.text = autoTitle
+                    findViewById<TextView>(R.id.appSubtitleText)?.text = "$autoTitle • ${AppVersion.shortLabel}"
                 }
 
                 // Inspect message for long-term preferences
@@ -589,7 +612,8 @@ class MainActivity : AppCompatActivity() {
                     isPrivacyModeOn = privacyModeToggle.isChecked,
                     state = state,
                     imagePath = imagePath,
-                    providedHistory = contextHistory
+                    providedHistory = contextHistory,
+                    overrideMode = ApiKeyManager.getInferenceOverride(this@MainActivity)
                 )
 
                 val latency = "${(System.currentTimeMillis() - startTime) / 1000.0}s"
@@ -635,22 +659,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showEditUserMessageDialog(message: MessageEntity) {
-        val input = EditText(this).apply {
-            setText(message.content)
-            setSelection(text.length)
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_prompt, null)
+        val editInput = dialogView.findViewById<EditText>(R.id.dialogEditInput)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnDialogCancel)
+        val btnConfirm = dialogView.findViewById<Button>(R.id.btnDialogConfirm)
+
+        editInput.setText(message.content)
+        editInput.setSelection(editInput.text.length)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            val newContent = editInput.text.toString().trim()
+            if (newContent.isNotBlank() && newContent != message.content) {
+                dialog.dismiss()
+                executeMessageEdit(message, newContent)
+            } else {
+                dialog.dismiss()
+            }
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Edit Message")
-            .setView(input)
-            .setPositiveButton("Save & Regenerate") { _, _ ->
-                val newContent = input.text.toString().trim()
-                if (newContent.isNotBlank() && newContent != message.content) {
-                    executeMessageEdit(message, newContent)
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        dialog.show()
     }
 
     private fun executeMessageEdit(oldMessage: MessageEntity, newContent: String) {
@@ -680,7 +714,8 @@ class MainActivity : AppCompatActivity() {
                     isPrivacyModeOn = privacyModeToggle.isChecked,
                     state = state,
                     imagePath = oldMessage.attachmentPath,
-                    providedHistory = contextHistory
+                    providedHistory = contextHistory,
+                    overrideMode = ApiKeyManager.getInferenceOverride(this@MainActivity)
                 )
 
                 hideThinking()
@@ -797,16 +832,6 @@ class MainActivity : AppCompatActivity() {
         view.findViewById<View>(R.id.menuAdjustRam).setOnClickListener {
             showCustomRamDialog()
             dialog.dismiss()
-        }
-
-        view.findViewById<View>(R.id.menuNewChat)?.setOnClickListener {
-            dialog.dismiss()
-            startNewConversation()
-        }
-
-        view.findViewById<View>(R.id.menuConversations)?.setOnClickListener {
-            dialog.dismiss()
-            showConversationsDialog()
         }
 
         view.findViewById<View>(R.id.menuMemories)?.setOnClickListener {
@@ -934,7 +959,13 @@ class MainActivity : AppCompatActivity() {
         networkLabel.text = "Network: $networkIcon $networkStr"
         batteryLabel.text = "Battery: ${state.batteryLevel.toInt()}%"
         val detail = decisionEngine.determineStrategy(state)
-        val displayStrategy = if (privacyModeToggle.isChecked) Strategy.LOCAL else detail.strategy
+        val overrideMode = ApiKeyManager.getInferenceOverride(this)
+        val displayStrategy = when {
+            overrideMode == com.dynamicedgeai.util.InferenceOverrideMode.LOCAL -> Strategy.LOCAL
+            overrideMode == com.dynamicedgeai.util.InferenceOverrideMode.CLOUD -> Strategy.CLOUD
+            privacyModeToggle.isChecked -> Strategy.LOCAL
+            else -> detail.strategy
+        }
         insightModeText.text = displayStrategy.name
         val modeColor = when(displayStrategy) { Strategy.LOCAL -> R.color.mode_local; Strategy.CLOUD -> R.color.accent_blue }
         insightModeText.setTextColor(ContextCompat.getColor(this, modeColor))
