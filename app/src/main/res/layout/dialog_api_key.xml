@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -15,12 +16,13 @@
         android:layout_marginBottom="12dp">
 
         <ImageView
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:src="@drawable/ic_key"
             android:background="@drawable/menu_icon_bg"
-            android:padding="6dp"
-            android:layout_marginEnd="10dp" />
+            android:padding="7dp"
+            app:tint="@color/accent_blue"
+            android:layout_marginEnd="12dp" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -30,9 +32,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Gemini API Key"
-                android:textColor="#F1F5F9"
-                android:textSize="18sp"
+                android:text="API Key Configuration"
+                android:textColor="@color/app_text_primary"
+                android:textSize="17sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -40,7 +42,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Current: Not configured"
-                android:textColor="#94A3B8"
+                android:textColor="@color/app_text_secondary"
                 android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
@@ -48,8 +50,8 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Enter your personal Gemini API key to enable Cloud AI inference and multimodal vision. Keys are securely stored only on this device."
-        android:textColor="#94A3B8"
+        android:text="Enter your personal API key for AI inference. Keys are securely stored client-side only on this device."
+        android:textColor="@color/app_text_secondary"
         android:textSize="13sp"
         android:lineSpacingExtra="2dp"
         android:layout_marginBottom="14dp" />
@@ -59,10 +61,10 @@
         android:id="@+id/editApiKeyInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Paste AIzaSy... key here"
+        android:hint="Paste your API key here"
         android:textSize="14sp"
-        android:textColor="#F1F5F9"
-        android:textColorHint="#64748B"
+        android:textColor="@color/app_text_primary"
+        android:textColorHint="@color/app_text_muted"
         android:background="@drawable/bg_input_outline"
         android:padding="12dp"
         android:inputType="textVisiblePassword"
@@ -82,7 +84,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Cancel"
-            android:textColor="#94A3B8"
+            android:textColor="@color/app_text_secondary"
             android:layout_marginEnd="8dp" />
 
         <Button
@@ -91,7 +93,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Clear"
-            android:textColor="#F87171"
+            android:textColor="#EF4444"
             android:layout_marginEnd="8dp" />
 
         <Button

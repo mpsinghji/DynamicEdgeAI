@@ -2,6 +2,39 @@
 
 ---
 
+## 🚀 Version 1.1.5 (Build 7) — 2026-11-03
+**Status:** Deployed via Wireless ADB / Ready for GitHub Release  
+**Package:** `com.dynamicedgeai`  
+**Target SDK:** 36 (Android 15+) | **Min SDK:** 26 (Android 8.0 Oreo)  
+**Git Tag:** `v1.1.5`  
+**Build Variant:** `release` (compatible debug-signature for seamless in-place updates)  
+**Release APK Filename:** `DynamicEdgeAI-v1.1.5-release.apk`  
+**Release APK SHA-256:** `b037e5ef3ab70161eeb0fa0d28cb085480ba0943efec7e717cbdbaabdc782089`  
+**Signing Certificate SHA-256:** `0940e42a8cbf0746bf7d48358eb0afbf43b77dcf0c4580069867370436893645` (CN=Android Debug)  
+**Deployment Status:** Successfully installed and running on device via wireless debugging.
+
+### 🌟 New Features & Enhancements
+- **UI Modernization & Design Language Upgrade:**
+  - Modernized card layouts with 20dp pill corners, dedicated AI microchip badge (`ic_cpu`), clean status badges (`★ Recommended`, `● Active`), and streamlined typography.
+  - Redesigned Model Manager toolbar into "Edge Models" with live storage pill badge (`Free: XX GB`).
+  - Redesigned all dialogs (`dialog_edit_prompt.xml`, `dialog_api_key.xml`, `dialog_conversations.xml`, `dialog_memories.xml`, and bottom sheets) to dynamically adopt active theme colors.
+- **Theme Switcher (Dark Mode / Light Mode / System Default):**
+  - Instant theme switching between AMOLED Midnight, Clean Day Light Mode, and System Default without activity reload.
+  - Theme-adaptive color palettes in `res/values/colors.xml` and `res/values-night/colors.xml`.
+- **Inference Execution Strategy & Client-Side API Keys:**
+  - Added 3-way Inference Override switch in Settings: "OFF (Adaptive Engine)", "LOCAL (Edge AI)", "CLOUD (Force Cloud AI)".
+  - Multi-platform client-side API key management for Google Gemini, OpenAI, Groq, OpenRouter, Anthropic Claude.
+  - Primary Google Cloud endpoint configured to `gemini-2.5-flash` with clear, human-readable explanations on HTTP 403 / leaked key errors.
+- **Cleaned Navigation & Permanent Telemetry:**
+  - Removed cluttered floating bottom nav bar in chat.
+  - Streamlined three-line hamburger menu to display only **Models** and **RAM**.
+  - Permanent diagnostic telemetry board reporting live RAM, CPU load, Network speed, and Battery level.
+- **In-App Auto-Updates & Settings Check:**
+  - Added dedicated "Check for Updates" button inside Settings.
+  - Startup floating banner displays update verification status and automatically hides after ~3.5s.
+
+---
+
 ## 🚀 Version 1.1.3 (Build 5) — 2026-11-03
 **Status:** Staged Locally & Pushed to GitHub / Ready for In-App Auto-Update Test  
 **Package:** `com.dynamicedgeai`  

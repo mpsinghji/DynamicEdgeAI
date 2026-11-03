@@ -41,3 +41,4 @@ object ThemeManager {
         applyTheme(mode)
     }
 }
+

@@ -30,14 +30,14 @@
             android:text="Long-Term Memory"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="#F1F5F9" />
+            android:textColor="@color/app_text_primary" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Enable"
             android:textSize="12sp"
-            android:textColor="#94A3B8"
+            android:textColor="@color/app_text_secondary"
             android:layout_marginEnd="6dp" />
 
         <Switch
@@ -52,13 +52,13 @@
         android:layout_height="wrap_content"
         android:text="The assistant retains key facts and user preferences across chats. Secrets and passwords are automatically filtered."
         android:textSize="11sp"
-        android:textColor="#94A3B8"
+        android:textColor="@color/app_text_secondary"
         android:layout_marginBottom="12dp" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#1E293B"
+        android:background="@color/app_surface_outline"
         android:layout_marginBottom="8dp" />
 
     <ScrollView
@@ -80,7 +80,7 @@
         android:gravity="center"
         android:text="No memories stored yet"
         android:textSize="13sp"
-        android:textColor="#64748B"
+        android:textColor="@color/app_text_muted"
         android:padding="24dp"
         android:visibility="gone" />
 

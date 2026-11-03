@@ -96,13 +96,18 @@ class CloudModelRunner(private val context: Context? = null) {
             }
         } catch (t: Throwable) {
             Log.e(tag, "${platform.displayName} inference failed", t)
-            val detailedMsg = if (t is HttpException) {
-                val errBody = try { t.response()?.errorBody()?.string() } catch (_: Exception) { null }
-                if (!errBody.isNullOrBlank()) "HTTP ${t.code()}: $errBody" else "HTTP ${t.code()}"
+            val msg = t.localizedMessage ?: t.javaClass.simpleName
+            if (msg.startsWith("Google Gemini Key Error") || msg.startsWith("Error:") || msg.startsWith("⚠️")) {
+                msg
             } else {
-                t.localizedMessage ?: t.javaClass.simpleName
+                val detailedMsg = if (t is HttpException) {
+                    val errBody = try { t.response()?.errorBody()?.string() } catch (_: Exception) { null }
+                    if (!errBody.isNullOrBlank()) "HTTP ${t.code()}: $errBody" else "HTTP ${t.code()}"
+                } else {
+                    msg
+                }
+                "Error: ${platform.displayName} request failed ($detailedMsg)"
             }
-            "Error: ${platform.displayName} request failed ($detailedMsg)"
         }
     }
 
@@ -140,9 +145,25 @@ class CloudModelRunner(private val context: Context? = null) {
                     return text
                 }
             } catch (e: HttpException) {
+                val errorBodyStr = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null }
+                Log.w(tag, "Gemini model $model returned HTTP ${e.code()}: $errorBodyStr")
+
+                if (e.code() == 403) {
+                    val message = if (!errorBodyStr.isNullOrBlank()) {
+                        try {
+                            val json = gson.fromJson(errorBodyStr, JsonObject::class.java)
+                            json.getAsJsonObject("error")?.get("message")?.asString ?: errorBodyStr
+                        } catch (_: Exception) {
+                            errorBodyStr
+                        }
+                    } else {
+                        "Permission denied / Invalid or leaked API key"
+                    }
+                    throw Exception("Google Gemini Key Error (HTTP 403):\n$message\n\nPlease obtain a free Gemini key at aistudio.google.com and enter it in Settings.")
+                }
+
                 lastError = e
-                Log.w(tag, "Gemini model $model returned HTTP ${e.code()}")
-                if (e.code() == 404 || e.code() == 403) {
+                if (e.code() == 404) {
                     continue
                 }
                 throw e
