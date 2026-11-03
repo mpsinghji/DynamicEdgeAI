@@ -87,6 +87,26 @@ class ModelManagerActivity : AppCompatActivity() {
     }
 
     private fun setupCard(model: LocalModel, card: View) {
+        val cardView = card.findViewById<androidx.cardview.widget.CardView>(R.id.modelCardView)
+            ?: (card as? androidx.cardview.widget.CardView)
+        val isNight = ThemeManager.isNightMode(this)
+        val cardBg = if (isNight) {
+            when (model) {
+                LocalModel.GEMMA_4_E4B -> android.graphics.Color.parseColor("#0E3D46") // Deep Teal (like Morphe)
+                LocalModel.Qwen -> android.graphics.Color.parseColor("#1D3E54")        // Slate Blue (like Paresh)
+                LocalModel.GEMMA_2B -> android.graphics.Color.parseColor("#1F3D17")    // Forest Green (like Heval)
+                LocalModel.TINY_LLAMA -> android.graphics.Color.parseColor("#4A152E")  // Plum Burgundy (like HushGram)
+            }
+        } else {
+            when (model) {
+                LocalModel.GEMMA_4_E4B -> android.graphics.Color.parseColor("#E0F2F1") // Soft Teal
+                LocalModel.Qwen -> android.graphics.Color.parseColor("#E1F0FA")        // Soft Slate Blue
+                LocalModel.GEMMA_2B -> android.graphics.Color.parseColor("#E8F5E9")    // Soft Mint
+                LocalModel.TINY_LLAMA -> android.graphics.Color.parseColor("#FCE4EC")  // Soft Plum
+            }
+        }
+        cardView?.setCardBackgroundColor(cardBg)
+
         card.findViewById<TextView>(R.id.txtModelName).text = model.displayName
         card.findViewById<TextView>(R.id.txtModelDesc).text = model.description
         card.findViewById<TextView>(R.id.txtModelSize).text = "Size: ${model.fileSizeLabel}"

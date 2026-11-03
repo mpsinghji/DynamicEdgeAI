@@ -13,8 +13,8 @@ android {
         applicationId = "com.dynamicedgeai"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.1.5"
+        versionCode = 8
+        versionName = "1.1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Hardcoded API key removed; user configures their Gemini API key via in-app Settings

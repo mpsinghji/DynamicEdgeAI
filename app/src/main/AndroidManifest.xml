@@ -9,6 +9,7 @@
 
     <application
         android:allowBackup="true"
+        android:largeHeap="true"
         android:icon="@drawable/ic_app_logo"
         android:label="Dynamic Edge AI"
         android:roundIcon="@drawable/ic_app_logo"

@@ -37,6 +37,7 @@ import com.dynamicedgeai.updater.UpdateCardBinder
 import com.dynamicedgeai.updater.UpdateState
 import com.dynamicedgeai.util.ApiKeyManager
 import com.dynamicedgeai.util.AppVersion
+import com.dynamicedgeai.util.MarkdownFormatter
 import com.dynamicedgeai.util.ModelStatus
 import com.dynamicedgeai.util.ThemeManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -74,7 +75,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ramLabel: TextView
     private lateinit var cpuLabel: TextView
     private lateinit var networkLabel: TextView
-    private lateinit var batteryLabel: TextView
     private lateinit var ramIndicator: ImageView
     private lateinit var cpuIndicator: ImageView
     private lateinit var insightModeText: TextView
@@ -129,7 +129,6 @@ class MainActivity : AppCompatActivity() {
         ramLabel = findViewById(R.id.ramLabel)
         cpuLabel = findViewById(R.id.cpuLabel)
         networkLabel = findViewById(R.id.networkLabel)
-        batteryLabel = findViewById(R.id.batteryLabel)
         ramIndicator = findViewById(R.id.ramIndicator)
         insightModeText = findViewById(R.id.insightModeText)
         insightsContainer = findViewById(R.id.insightsContainer)
@@ -726,7 +725,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderUserBubble(message: MessageEntity) {
         val view = LayoutInflater.from(this).inflate(R.layout.item_chat_user, chatContainer, false)
-        view.findViewById<TextView>(R.id.messageText).text = message.content
+        view.findViewById<TextView>(R.id.messageText).text = MarkdownFormatter.format(message.content, this)
         val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
         view.findViewById<TextView>(R.id.timestamp).text = timeStr
 
@@ -761,7 +760,7 @@ class MainActivity : AppCompatActivity() {
         latency: String = ""
     ) {
         val view = LayoutInflater.from(this).inflate(R.layout.item_chat_ai, chatContainer, false)
-        view.findViewById<TextView>(R.id.messageText).text = message.content
+        view.findViewById<TextView>(R.id.messageText).text = MarkdownFormatter.format(message.content, this)
 
         val executionLayout = view.findViewById<View>(R.id.executionInfo)
         if (detail != null) {
@@ -839,12 +838,20 @@ class MainActivity : AppCompatActivity() {
         } else {
             downloaded.forEach { model ->
                 val isActive = localModelRunner.currentModel == model
+                val isDark = ThemeManager.isNightMode(this)
+                val textColor = if (isActive) {
+                    0xFF38BDF8.toInt()
+                } else if (isDark) {
+                    0xFFF1F5F9.toInt()
+                } else {
+                    0xFF1E293B.toInt()
+                }
                 val row = TextView(this).apply {
                     text = "${if (isActive) "● " else "  "}${model.displayName} (${model.fileSizeLabel})"
-                    setTextColor(if (isActive) 0xFF1E88E5.toInt() else 0xFF333333.toInt())
+                    setTextColor(textColor)
                     textSize = 13f
-                    setPadding(20, 12, 20, 12)
-                    setBackgroundResource(R.drawable.card_outline)
+                    setPadding(24, 16, 24, 16)
+                    setBackgroundResource(if (isActive) R.drawable.bg_status_badge_cloud else R.drawable.card_outline)
                 }
 
                 row.setOnClickListener {
@@ -925,7 +932,7 @@ class MainActivity : AppCompatActivity() {
             else -> R.drawable.dot_red
         })
 
-        cpuLabel.text = "${state.cpuUsage}%"
+        cpuLabel.text = "CPU ${state.cpuUsage}%"
 
         val networkStr = when(state.networkQuality) {
             NetworkQuality.EXCELLENT -> "Wi-Fi (85 Mbps)"
@@ -935,9 +942,6 @@ class MainActivity : AppCompatActivity() {
             else -> "Offline"
         }
         networkLabel.text = networkStr
-
-        val chargingSymbol = if (state.isCharging) " ⚡" else ""
-        batteryLabel.text = "${state.batteryLevel.toInt()}%$chargingSymbol"
 
         val detail = decisionEngine.determineStrategy(state)
         val overrideMode = ApiKeyManager.getInferenceOverride(this)

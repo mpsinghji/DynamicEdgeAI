@@ -128,8 +128,8 @@ class LocalModelRunner private constructor(context: Context) {
      * Ensures the correct engine is loaded for [currentModel].
      * @return true if inference can proceed.
      */
-    private suspend fun ensureInitialized(): Boolean {
-        if (isInitialized) return true
+    private suspend fun ensureInitialized(hasImage: Boolean = false): Boolean {
+        if (isInitialized && (llmInference != null || ggufEngine != null)) return true
 
         val modelFile = getModelPath(currentModel)
         if (!modelFile.exists()) {
@@ -146,7 +146,7 @@ class LocalModelRunner private constructor(context: Context) {
         return if (currentModel.isGguf) {
             initGgufEngine(modelFile)
         } else {
-            initMediaPipeEngine(modelFile)
+            initMediaPipeEngine(modelFile, hasImage)
         }
     }
 
@@ -182,47 +182,60 @@ class LocalModelRunner private constructor(context: Context) {
         }
     }
 
-    private fun initMediaPipeEngine(modelFile: File): Boolean {
+    private fun initMediaPipeEngine(modelFile: File, hasImage: Boolean = false): Boolean {
         if (!modelFile.exists() || modelFile.length() < 1000L) {
             diagnosticInfo = "Stage: Model File Check\nError: File is missing or incomplete (${modelFile.length()} bytes).\nSuggestion: Re-download the model from the Model Manager."
             return false
         }
 
-        return try {
-            Log.i(tag, "Loading Gemma via MediaPipe/LiteRT 0.10.35 from ${modelFile.absolutePath}")
-            
-            // First attempt: GPU Backend with multimodal configuration
-            try {
-                val gpuOptions = LlmInference.LlmInferenceOptions.builder()
-                    .setModelPath(modelFile.absolutePath)
-                    .setMaxTokens(2048)
-                    .setMaxNumImages(if (currentModel.isLiteRtLm) 1 else 0)
-                    .setPreferredBackend(LlmInference.Backend.GPU)
-                    .build()
-                llmInference = LlmInference.createFromOptions(appContext, gpuOptions)
-                isInitialized = true
-                Log.i(tag, "MediaPipe/LiteRT engine ready with GPU backend: ${currentModel.displayName}")
-                return true
-            } catch (gpuError: Throwable) {
-                Log.w(tag, "GPU initialization failed, falling back to CPU: ${gpuError.message}")
-            }
+        // Release any existing instances to reclaim native memory
+        try { llmInference?.close() } catch (_: Exception) {}
+        llmInference = null
+        isInitialized = false
+        System.gc()
 
-            // Fallback: CPU Backend
-            val cpuOptions = LlmInference.LlmInferenceOptions.builder()
+        val isLargeModel = currentModel.expectedSizeBytes > 2_000_000_000L // e.g. Gemma 4 E4B-it (3.4 GB)
+        val maxTokens = if (isLargeModel) 512 else 1024
+        val numImages = if (hasImage && currentModel.isLiteRtLm) 1 else 0
+
+        Log.i(tag, "Loading Gemma via MediaPipe 0.10.35 from ${modelFile.absolutePath} (largeModel=$isLargeModel, maxTokens=$maxTokens, numImages=$numImages)")
+
+        // For large models (3.4GB), use CPU with XNNPACK to prevent GPU OpenCL buffer duplication
+        // which causes Linux LowMemoryKiller (MMUD > 7.4GB SIGKILL).
+        val preferredBackend = if (isLargeModel) LlmInference.Backend.CPU else LlmInference.Backend.GPU
+
+        try {
+            val options = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile.absolutePath)
-                .setMaxTokens(2048)
-                .setMaxNumImages(if (currentModel.isLiteRtLm) 1 else 0)
+                .setMaxTokens(maxTokens)
+                .setMaxNumImages(numImages)
+                .setPreferredBackend(preferredBackend)
+                .build()
+            llmInference = LlmInference.createFromOptions(appContext, options)
+            isInitialized = true
+            Log.i(tag, "MediaPipe engine ready ($preferredBackend): ${currentModel.displayName}")
+            return true
+        } catch (err: Throwable) {
+            Log.w(tag, "Primary backend $preferredBackend failed: ${err.message}, attempting conservative CPU fallback...")
+        }
+
+        // Fallback: CPU Backend with conservative 384 tokens
+        return try {
+            val fallbackOptions = LlmInference.LlmInferenceOptions.builder()
+                .setModelPath(modelFile.absolutePath)
+                .setMaxTokens(384)
+                .setMaxNumImages(numImages)
                 .setPreferredBackend(LlmInference.Backend.CPU)
                 .build()
-            llmInference = LlmInference.createFromOptions(appContext, cpuOptions)
+            llmInference = LlmInference.createFromOptions(appContext, fallbackOptions)
             isInitialized = true
-            Log.i(tag, "MediaPipe/LiteRT engine ready with CPU fallback: ${currentModel.displayName}")
+            Log.i(tag, "MediaPipe engine ready with conservative CPU fallback: ${currentModel.displayName}")
             true
         } catch (e: Throwable) {
             diagnosticInfo = "Stage: LiteRT-LM Engine Initialization\n" +
                     "Error: ${e.localizedMessage ?: "Failed to initialize engine"}\n" +
-                    "Suggestion: Verify model file matches ${currentModel.fileSizeLabel} and that phone has at least 4GB free RAM."
-            Log.e(tag, "MediaPipe engine failed: ${e.localizedMessage}", e)
+                    "Suggestion: Free up RAM by closing background apps before running ${currentModel.displayName}."
+            Log.e(tag, "MediaPipe engine failed completely: ${e.localizedMessage}", e)
             false
         }
     }
@@ -255,7 +268,8 @@ class LocalModelRunner private constructor(context: Context) {
         history: List<ChatMessage>,
         imagePath: String? = null
     ): String = withContext(Dispatchers.Default) {
-        val ready = ensureInitialized()
+        val hasImage = !imagePath.isNullOrBlank()
+        val ready = ensureInitialized(hasImage)
         val latestPrompt = history.lastOrNull()?.content ?: ""
 
         if (!ready) {
@@ -271,17 +285,38 @@ class LocalModelRunner private constructor(context: Context) {
             } else {
                 // MediaPipe / LiteRT-LM path
                 val engine = llmInference ?: return@withContext "Engine not initialized."
-                val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
-                    .setTemperature(0.7f)
-                    .setTopK(40)
-                    .setRandomSeed(Random.nextInt())
-                    .build()
 
-                val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
-                try {
-                    // If image is provided and model is multimodal (Gemma 4)
-                    if (!imagePath.isNullOrBlank() && currentModel.isLiteRtLm) {
-                        val imgFile = File(imagePath)
+                if (!hasImage) {
+                    val formatted = applyGemmaTemplate(latestPrompt)
+                    try {
+                        val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
+                            .setTemperature(0.7f)
+                            .setTopK(40)
+                            .setRandomSeed(Random.nextInt())
+                            .build()
+                        val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
+                        try {
+                            session.addQueryChunk(formatted)
+                            val raw = session.generateResponse()
+                            cleanGemmaResponse(raw)
+                        } finally {
+                            try { session.close() } catch (_: Exception) {}
+                        }
+                    } catch (sessionErr: Throwable) {
+                        Log.w(tag, "Session inference fallback to direct generateResponse: ${sessionErr.message}")
+                        val raw = engine.generateResponse(formatted)
+                        cleanGemmaResponse(raw)
+                    }
+                } else {
+                    // Multimodal path (with image)
+                    val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
+                        .setTemperature(0.7f)
+                        .setTopK(40)
+                        .setRandomSeed(Random.nextInt())
+                        .build()
+                    val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
+                    try {
+                        val imgFile = File(imagePath!!)
                         if (imgFile.exists() && imgFile.canRead()) {
                             val bitmap = BitmapFactory.decodeFile(imagePath)
                             if (bitmap != null) {
@@ -289,14 +324,13 @@ class LocalModelRunner private constructor(context: Context) {
                                 session.addImage(mpImage)
                             }
                         }
+                        val formatted = applyGemmaTemplate(latestPrompt)
+                        session.addQueryChunk(formatted)
+                        val raw = session.generateResponse()
+                        cleanGemmaResponse(raw)
+                    } finally {
+                        try { session.close() } catch (_: Exception) {}
                     }
-
-                    val formatted = applyGemmaTemplate(latestPrompt)
-                    session.addQueryChunk(formatted)
-                    val raw = session.generateResponse()
-                    cleanGemmaResponse(raw)
-                } finally {
-                    session.close()
                 }
             }
         } catch (e: Throwable) {

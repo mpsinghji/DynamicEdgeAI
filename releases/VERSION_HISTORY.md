@@ -2,6 +2,42 @@
 
 ---
 
+## 🚀 Version 1.1.6 (Build 8) — 2026-11-03
+**Status:** Deployed via Wireless ADB / Ready for GitHub Release  
+**Package:** `com.dynamicedgeai`  
+**Target SDK:** 36 (Android 15+) | **Min SDK:** 26 (Android 8.0 Oreo)  
+**Git Tag:** `v1.1.6`  
+**Build Variant:** `release` (compatible debug-signature for seamless in-place updates)  
+**Release APK Filename:** `DynamicEdgeAI-v1.1.6-release.apk`  
+**Release APK SHA-256:** `A16C691AA65A7D23D80CB4EF37FB935B021F220543362CF627DFAF64CDA71ED5`  
+**Signing Certificate SHA-256:** `0940e42a8cbf0746bf7d48358eb0afbf43b77dcf0c4580069867370436893645` (CN=Android Debug)  
+**Deployment Status:** Successfully built, verified, and installed on device via wireless debugging.
+
+### 🌟 New Features & Enhancements
+- **ReVanced / Morphe Design Language Elevation:**
+  - Modernized the Edge Models screen to mirror the sleek ReVanced "Sources" aesthetic:
+    - **Gemma 4 E4B-it:** Deep Teal card (`#0E3D46`)
+    - **Qwen 2.5 3B:** Slate Blue card (`#1D3E54`)
+    - **Gemma 2B:** Deep Forest Green card (`#1F3D17`)
+    - **TinyLlama 1.1B:** Plum Burgundy card (`#4A152E`)
+  - Elevated card corner radius to `22dp`, streamlined circular action buttons, and live storage indicator.
+  - Enhanced Bottom Sheet local models list with high-contrast theme-adaptive colors and active status indicators.
+- **Ultra-Compact 36dp Telemetry Pill:**
+  - Replaced bulky multi-row telemetry box with a minimal single-line 36dp pill bar.
+  - Permanently removed battery readout to prevent screen clutter.
+  - Unblocks 90%+ of vertical screen space for conversational chat.
+- **Native Markdown Text Engine (Zero Raw Asterisks):**
+  - Integrated `MarkdownFormatter.kt` to parse AI responses into native Android `SpannableStringBuilder`.
+  - Replaces raw asterisks with native **bold**, *italic*, `monospace code`, and clean bullet points (`•`).
+  - Cleans up orphan markdown delimiters for polished presentation.
+- **Gemma 4 E4B-it (3.4 GB) On-Device Crash Resolution:**
+  - Diagnosed native GPU OpenCL VRAM kernel OOM (7.45 GB peak allocation triggering Linux LMK SIGKILL).
+  - Switched large models to CPU XNNPACK `mmap` engine operating safely within physical RAM limits (~3.6 GB).
+  - Reduced KV cache memory overhead by 75% (`maxTokens=512`).
+  - Set `maxNumImages=0` for text queries and enabled `android:largeHeap="true"`.
+
+---
+
 ## 🚀 Version 1.1.5 (Build 7) — 2026-11-03
 **Status:** Deployed via Wireless ADB / Ready for GitHub Release  
 **Package:** `com.dynamicedgeai`  
