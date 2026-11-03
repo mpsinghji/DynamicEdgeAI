@@ -8,15 +8,15 @@
     android:layout_marginEnd="16dp"
     android:layout_marginTop="8dp"
     android:layout_marginBottom="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:cardBackgroundColor="#FFFFFF">
+    app:cardCornerRadius="16dp"
+    app:cardElevation="3dp"
+    app:cardBackgroundColor="#131924">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="16dp">
 
         <!-- Header: Icon, Title, Status Badge, Close/Dismiss -->
         <RelativeLayout
@@ -37,7 +37,7 @@
                     android:layout_height="22dp"
                     android:src="@drawable/ic_download"
                     app:tint="@color/accent_blue"
-                    android:layout_marginEnd="8dp" />
+                    android:layout_marginEnd="10dp" />
 
                 <TextView
                     android:id="@+id/txtUpdateTitle"
@@ -46,7 +46,7 @@
                     android:text="Software Update"
                     android:textSize="14sp"
                     android:textStyle="bold"
-                    android:textColor="#333333" />
+                    android:textColor="#F1F5F9" />
 
                 <TextView
                     android:id="@+id/badgeUpdateState"
@@ -57,7 +57,7 @@
                     android:text="New"
                     android:textSize="9sp"
                     android:textStyle="bold"
-                    android:textColor="#E65100"
+                    android:textColor="#FBBF24"
                     android:visibility="gone" />
             </LinearLayout>
 
@@ -68,8 +68,8 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                app:tint="#999999"
+                android:src="@drawable/ic_close"
+                app:tint="#64748B"
                 android:visibility="gone" />
         </RelativeLayout>
 
@@ -81,7 +81,7 @@
             android:layout_marginTop="6dp"
             android:text="Check for latest releases from GitHub."
             android:textSize="12sp"
-            android:textColor="#666666" />
+            android:textColor="#94A3B8" />
 
         <!-- Extra details (e.g. Size, version) -->
         <TextView
@@ -91,7 +91,7 @@
             android:layout_marginTop="2dp"
             android:text=""
             android:textSize="11sp"
-            android:textColor="#888888"
+            android:textColor="#64748B"
             android:visibility="gone" />
 
         <!-- Progress bar (Determinate during download, Indeterminate during check) -->
@@ -100,7 +100,7 @@
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="6dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:progress="0"
             android:max="100"
             android:progressDrawable="@drawable/progress_bar_blue"
@@ -120,8 +120,8 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:text="0%"
-                android:textSize="10sp"
-                android:textColor="#555555" />
+                android:textSize="11sp"
+                android:textColor="#38BDF8" />
 
             <TextView
                 android:id="@+id/txtUpdateSpeed"
@@ -129,8 +129,8 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:text="-- MB/s"
-                android:textSize="10sp"
-                android:textColor="#777777" />
+                android:textSize="11sp"
+                android:textColor="#94A3B8" />
         </RelativeLayout>
 
         <!-- Action Buttons Container -->
@@ -139,16 +139,16 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="end"
-            android:layout_marginTop="10dp">
+            android:layout_marginTop="12dp">
 
             <Button
                 android:id="@+id/btnUpdateActionSecondary"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="38dp"
                 android:text="Later"
                 android:textSize="12sp"
-                android:textColor="#777777"
+                android:textColor="#94A3B8"
                 android:visibility="gone"
                 android:layout_marginEnd="6dp" />
 
@@ -156,7 +156,7 @@
                 android:id="@+id/btnUpdateActionPrimary"
                 style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="38dp"
                 android:text="Check for Updates"
                 android:textSize="12sp"
                 android:textAllCaps="false"

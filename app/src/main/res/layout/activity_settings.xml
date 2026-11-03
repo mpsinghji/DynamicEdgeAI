@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F8F9FA"
+    android:background="@color/dark_bg"
     android:fitsSystemWindows="true">
 
     <!-- Top Toolbar -->
@@ -12,8 +12,8 @@
         android:id="@+id/settingsToolbar"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:background="@color/white"
-        android:elevation="2dp"
+        android:background="@color/dark_bg"
+        android:elevation="4dp"
         android:paddingStart="8dp"
         android:paddingEnd="16dp">
 
@@ -24,7 +24,7 @@
             android:layout_centerVertical="true"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_arrow_back"
-            app:tint="#333333"
+            app:tint="#F1F5F9"
             android:contentDescription="Back" />
 
         <TextView
@@ -34,7 +34,7 @@
             android:layout_centerVertical="true"
             android:layout_marginStart="8dp"
             android:text="Settings &amp; Providers"
-            android:textColor="#222222"
+            android:textColor="#F1F5F9"
             android:textSize="18sp"
             android:textStyle="bold" />
     </RelativeLayout>
@@ -54,7 +54,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Inference Execution Strategy"
-                android:textColor="#1976D2"
+                android:textColor="#38BDF8"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
@@ -62,16 +62,16 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="1dp"
-                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="#131924"
                 android:layout_marginBottom="20dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="14dp">
+                    android:padding="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -79,16 +79,16 @@
                         android:text="Execution Mode Override"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="#222222" />
+                        android:textColor="#F1F5F9" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Choose how prompts are processed or let the Decision Engine dynamically adapt."
                         android:textSize="11sp"
-                        android:textColor="#777777"
+                        android:textColor="#94A3B8"
                         android:layout_marginTop="2dp"
-                        android:layout_marginBottom="10dp" />
+                        android:layout_marginBottom="12dp" />
 
                     <RadioGroup
                         android:id="@+id/radioGroupInferenceOverride"
@@ -101,27 +101,30 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="OFF (Adaptive Engine) — Auto-switch by telemetry"
-                            android:textColor="#333333"
+                            android:textColor="#F1F5F9"
+                            android:buttonTint="#38BDF8"
                             android:textSize="13sp"
-                            android:paddingStart="4dp" />
+                            android:paddingStart="6dp" />
 
                         <RadioButton
                             android:id="@+id/radioOverrideLocal"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="LOCAL — Force on-device Edge AI"
-                            android:textColor="#333333"
+                            android:textColor="#F1F5F9"
+                            android:buttonTint="#4ADE80"
                             android:textSize="13sp"
-                            android:paddingStart="4dp" />
+                            android:paddingStart="6dp" />
 
                         <RadioButton
                             android:id="@+id/radioOverrideCloud"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="CLOUD — Force Cloud AI provider"
-                            android:textColor="#333333"
+                            android:textColor="#F1F5F9"
+                            android:buttonTint="#60A5FA"
                             android:textSize="13sp"
-                            android:paddingStart="4dp" />
+                            android:paddingStart="6dp" />
                     </RadioGroup>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -131,7 +134,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Active Cloud AI Provider"
-                android:textColor="#1976D2"
+                android:textColor="#38BDF8"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
@@ -139,24 +142,24 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="1dp"
-                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="#131924"
                 android:layout_marginBottom="20dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="14dp">
+                    android:padding="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Select provider used when routing to Cloud AI:"
-                        android:textColor="#666666"
+                        android:textColor="#94A3B8"
                         android:textSize="12sp"
-                        android:layout_marginBottom="10dp" />
+                        android:layout_marginBottom="12dp" />
 
                     <RadioGroup
                         android:id="@+id/radioGroupProviders"
@@ -169,8 +172,10 @@
                             android:layout_height="wrap_content"
                             android:text="Google Gemini (Gemini 1.5 Flash)"
                             android:textSize="14sp"
-                            android:textColor="#333333"
-                            android:paddingVertical="4dp" />
+                            android:textColor="#F1F5F9"
+                            android:buttonTint="#38BDF8"
+                            android:paddingVertical="4dp"
+                            android:paddingStart="6dp" />
 
                         <RadioButton
                             android:id="@+id/radioOpenAI"
@@ -178,8 +183,10 @@
                             android:layout_height="wrap_content"
                             android:text="OpenAI (GPT-4o mini)"
                             android:textSize="14sp"
-                            android:textColor="#333333"
-                            android:paddingVertical="4dp" />
+                            android:textColor="#F1F5F9"
+                            android:buttonTint="#38BDF8"
+                            android:paddingVertical="4dp"
+                            android:paddingStart="6dp" />
 
                         <RadioButton
                             android:id="@+id/radioGroq"
@@ -187,8 +194,10 @@
                             android:layout_height="wrap_content"
                             android:text="Groq (Llama 3.3 70B - Ultra Fast)"
                             android:textSize="14sp"
-                            android:textColor="#333333"
-                            android:paddingVertical="4dp" />
+                            android:textColor="#F1F5F9"
+                            android:buttonTint="#38BDF8"
+                            android:paddingVertical="4dp"
+                            android:paddingStart="6dp" />
 
                         <RadioButton
                             android:id="@+id/radioOpenRouter"
@@ -196,8 +205,10 @@
                             android:layout_height="wrap_content"
                             android:text="OpenRouter (Universal Model Router)"
                             android:textSize="14sp"
-                            android:textColor="#333333"
-                            android:paddingVertical="4dp" />
+                            android:textColor="#F1F5F9"
+                            android:buttonTint="#38BDF8"
+                            android:paddingVertical="4dp"
+                            android:paddingStart="6dp" />
 
                         <RadioButton
                             android:id="@+id/radioAnthropic"
@@ -205,8 +216,10 @@
                             android:layout_height="wrap_content"
                             android:text="Anthropic Claude (Claude 3.5 Haiku)"
                             android:textSize="14sp"
-                            android:textColor="#333333"
-                            android:paddingVertical="4dp" />
+                            android:textColor="#F1F5F9"
+                            android:buttonTint="#38BDF8"
+                            android:paddingVertical="4dp"
+                            android:paddingStart="6dp" />
                     </RadioGroup>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -216,7 +229,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Client-Side API Keys"
-                android:textColor="#1976D2"
+                android:textColor="#38BDF8"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="4dp" />
@@ -225,7 +238,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="All keys are saved 100% locally on your phone. No keys are hardcoded or sent to third-party servers."
-                android:textColor="#777777"
+                android:textColor="#94A3B8"
                 android:textSize="11sp"
                 android:layout_marginBottom="12dp" />
 
@@ -242,7 +255,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Privacy &amp; Memory"
-                android:textColor="#1976D2"
+                android:textColor="#38BDF8"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
@@ -250,9 +263,9 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="1dp"
-                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="#131924"
                 android:layout_marginBottom="24dp">
 
                 <LinearLayout
@@ -279,14 +292,14 @@
                                 android:text="Long-Term Chat Memory"
                                 android:textSize="14sp"
                                 android:textStyle="bold"
-                                android:textColor="#333333" />
+                                android:textColor="#F1F5F9" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Extracts preferences and instructions across chats"
                                 android:textSize="11sp"
-                                android:textColor="#888888" />
+                                android:textColor="#94A3B8" />
                         </LinearLayout>
 
                         <Switch
@@ -303,7 +316,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Inspect &amp; Manage Stored Memories"
-                        android:textColor="#1976D2"
+                        android:textColor="#38BDF8"
                         android:textSize="13sp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -313,9 +326,9 @@
                 android:id="@+id/txtSettingsAppVersion"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="DynamicEdgeAI • v1.1.3 (Build 5)"
+                android:text="DynamicEdgeAI"
                 android:gravity="center"
-                android:textColor="#9E9E9E"
+                android:textColor="#64748B"
                 android:textSize="12sp"
                 android:layout_marginBottom="12dp" />
 
@@ -323,13 +336,13 @@
             <Button
                 android:id="@+id/btnSettingsCheckUpdates"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="46dp"
                 android:text="Check for Updates"
-                android:textColor="#1976D2"
+                android:textColor="#38BDF8"
                 android:textSize="13sp"
                 android:background="@drawable/bg_input_outline"
-                android:layout_marginStart="32dp"
-                android:layout_marginEnd="32dp"
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
                 android:layout_marginBottom="8dp" />
 
             <TextView
@@ -337,7 +350,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:textColor="#78909C"
+                android:textColor="#38BDF8"
                 android:textSize="11sp"
                 android:visibility="gone"
                 android:layout_marginBottom="12dp" />
@@ -347,11 +360,10 @@
                 android:layout_height="wrap_content"
                 android:text="Open Source on GitHub: mpsinghji/DynamicEdgeAI"
                 android:gravity="center"
-                android:textColor="#B0BEC5"
+                android:textColor="#64748B"
                 android:textSize="11sp"
                 android:layout_marginBottom="32dp" />
 
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
-

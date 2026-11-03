@@ -3,16 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="1dp"
-    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="#131924"
     android:layout_marginBottom="12dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="16dp">
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -31,7 +31,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Google Gemini"
-                    android:textColor="#222222"
+                    android:textColor="#F1F5F9"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
@@ -40,7 +40,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Default Model: gemini-1.5-flash"
-                    android:textColor="#757575"
+                    android:textColor="#94A3B8"
                     android:textSize="11sp" />
             </LinearLayout>
 
@@ -52,7 +52,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:text="Get Key ↗"
-                android:textColor="#1976D2"
+                android:textColor="#38BDF8"
                 android:textSize="11sp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
@@ -63,10 +63,10 @@
             android:id="@+id/txtPlatformKeyStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="● Key Configured: AIzaSy••••••••vvsM"
-            android:textColor="#2E7D32"
+            android:text="● Key Configured"
+            android:textColor="#4ADE80"
             android:textSize="12sp"
-            android:layout_marginBottom="10dp" />
+            android:layout_marginBottom="12dp" />
 
         <!-- Actions -->
         <LinearLayout
@@ -81,7 +81,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:text="Clear"
-                android:textColor="#D32F2F"
+                android:textColor="#F87171"
                 android:textSize="12sp"
                 android:layout_marginEnd="8dp" />
 
@@ -98,4 +98,3 @@
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>
-

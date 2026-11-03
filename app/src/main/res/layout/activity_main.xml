@@ -1,21 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mainRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FDFDFD"
+    android:background="@color/dark_bg"
     android:fitsSystemWindows="true">
 
+    <!-- Top App Header (Brand + Circular Action Buttons - Zero Overlap) -->
     <RelativeLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/white"
+        android:background="@color/dark_bg"
         android:paddingStart="16dp"
-        android:paddingEnd="12dp"
+        android:paddingEnd="16dp"
         android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:elevation="2dp">
+        android:paddingBottom="10dp"
+        android:elevation="4dp">
 
         <!-- Left Brand & Title -->
         <LinearLayout
@@ -29,8 +31,8 @@
             android:gravity="center_vertical">
 
             <ImageView
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
                 android:src="@drawable/ic_app_logo"
                 android:layout_marginEnd="10dp"/>
 
@@ -43,8 +45,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="DynamicEdgeAI"
-                    android:textColor="#222222"
-                    android:textSize="17sp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="20sp"
                     android:textStyle="bold"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -53,14 +55,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Edge &amp; Cloud Intelligence"
-                    android:textColor="#777777"
+                    android:textColor="#94A3B8"
                     android:textSize="11sp"
                     android:maxLines="1"
                     android:ellipsize="end" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Right Quick Action Bar (Never Overlaps) -->
+        <!-- Right Quick Action Bar (3 Circular Dark Buttons) -->
         <LinearLayout
             android:id="@+id/headerActions"
             android:layout_width="wrap_content"
@@ -70,42 +72,42 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
+            <!-- History quick button -->
+            <ImageButton
+                android:id="@+id/btnHeaderConversations"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:src="@drawable/ic_history"
+                android:background="@drawable/bg_circular_action_btn"
+                app:tint="#94A3B8"
+                android:scaleType="fitCenter"
+                android:padding="8dp"
+                android:contentDescription="Chat History"
+                android:layout_marginEnd="8dp" />
+
             <!-- New Chat quick button -->
             <ImageButton
                 android:id="@+id/btnHeaderNewChat"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
                 android:src="@drawable/ic_add"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#1E88E5"
+                android:background="@drawable/bg_circular_action_btn"
+                app:tint="#38BDF8"
                 android:scaleType="fitCenter"
-                android:padding="6dp"
+                android:padding="8dp"
                 android:contentDescription="New Chat"
-                android:layout_marginEnd="2dp" />
-
-            <!-- Conversations history quick button -->
-            <ImageButton
-                android:id="@+id/btnHeaderConversations"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_history"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#546E7A"
-                android:scaleType="fitCenter"
-                android:padding="6dp"
-                android:contentDescription="Chat History"
-                android:layout_marginEnd="2dp" />
+                android:layout_marginEnd="8dp" />
 
             <!-- Settings quick button -->
             <ImageButton
                 android:id="@+id/btnHeaderSettings"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
                 android:src="@drawable/ic_settings"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#546E7A"
+                android:background="@drawable/bg_circular_action_btn"
+                app:tint="#94A3B8"
                 android:scaleType="fitCenter"
-                android:padding="6dp"
+                android:padding="8dp"
                 android:contentDescription="Settings" />
         </LinearLayout>
     </RelativeLayout>
@@ -117,44 +119,109 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/header"
-        android:layout_marginTop="8dp" />
+        android:layout_marginTop="4dp" />
 
-    <!-- Insights Card -->
+    <!-- Sleek Status & Telemetry Pill Card (Ref: Image 1 Top Status Card) -->
     <LinearLayout
         android:id="@+id/insightsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/header"
+        android:layout_below="@id/includedUpdateBanner"
         android:orientation="vertical"
-        android:padding="16dp"
-        android:visibility="visible">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/card_insights"
+            android:background="@drawable/bg_telemetry_pill"
             android:orientation="vertical"
-            android:elevation="2dp">
+            android:padding="12dp">
 
+            <!-- Summary Bar (Click to toggle detailed telemetry) -->
             <LinearLayout
+                android:id="@+id/insightsToggle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_outline"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
+                android:clickable="true"
+                android:focusable="true">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- Left Glowing Status Dot -->
+                <ImageView
+                    android:id="@+id/ramIndicator"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:src="@drawable/ic_check_green"
+                    android:layout_marginEnd="10dp" />
+
+                <!-- Center Telemetry Info -->
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="System Telemetry"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="#455A64" />
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Dynamic AI Engine"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#F1F5F9" />
+
+                    <!-- Quick Telemetry Chips -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="2dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/ramLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RAM: --"
+                            android:textSize="11sp"
+                            android:textColor="#94A3B8" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" • "
+                            android:textSize="11sp"
+                            android:textColor="#64748B" />
+
+                        <TextView
+                            android:id="@+id/cpuLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="CPU: --"
+                            android:textSize="11sp"
+                            android:textColor="#94A3B8" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" • "
+                            android:textSize="11sp"
+                            android:textColor="#64748B" />
+
+                        <TextView
+                            android:id="@+id/networkLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Net: --"
+                            android:textSize="11sp"
+                            android:textColor="#94A3B8" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Right Pill Badge (LOCAL / CLOUD) -->
                 <TextView
                     android:id="@+id/insightModeText"
                     android:layout_width="wrap_content"
@@ -162,126 +229,75 @@
                     android:text="LOCAL"
                     android:textStyle="bold"
                     android:textSize="11sp"
-                    android:textColor="@color/mode_local"
+                    android:textColor="#4ADE80"
+                    android:background="@drawable/bg_status_badge_local"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
                     android:layout_marginStart="8dp"
-                    android:background="@drawable/badge_recommended"
-                    android:paddingHorizontal="6dp"
-                    android:paddingVertical="2dp" />
+                    android:layout_marginEnd="6dp" />
 
-                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Privacy"
-                    android:textSize="11sp"
-                    android:textColor="#666666"
-                    android:layout_marginEnd="2dp"/>
-
-                <Switch
-                    android:id="@+id/privacyModeToggle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:checked="false" />
-
-                <LinearLayout
-                    android:id="@+id/insightsToggle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:padding="2dp">
-
-                    <ImageView
-                        android:id="@+id/insightsInfoIcon"
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_ai_small"
-                        app:tint="#666666" />
-                </LinearLayout>
+                <!-- Chevron Icon -->
+                <ImageView
+                    android:id="@+id/insightsInfoIcon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_arrow_back"
+                    android:rotation="270"
+                    app:tint="#64748B" />
             </LinearLayout>
 
+            <!-- Detailed Telemetry Sub-panel (Collapsible) -->
             <LinearLayout
+                android:id="@+id/insightsDetailPanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:baselineAligned="false"
-                android:padding="12dp">
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="8dp">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#1E293B"
+                    android:layout_marginBottom="8dp" />
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-                        <ImageView
-                            android:id="@+id/ramIndicator"
-                            android:layout_width="8dp"
-                            android:layout_height="8dp"
-                            android:src="@drawable/ic_check_green"
-                            android:layout_marginEnd="6dp"/>
-                        <TextView
-                            android:id="@+id/ramLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="RAM: --"
-                            android:textSize="11sp"
-                            android:textColor="#444444" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="4dp">
-                        <ImageView
-                            android:id="@+id/cpuIndicator"
-                            android:layout_width="8dp"
-                            android:layout_height="8dp"
-                            android:src="@drawable/dot_green"
-                            android:layout_marginEnd="6dp"/>
-                        <TextView
-                            android:id="@+id/cpuLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="CPU: --"
-                            android:textSize="11sp"
-                            android:textColor="#444444" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/networkLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Network: --"
-                        android:textSize="11sp"
-                        android:textColor="#444444" />
+                    <ImageView
+                        android:id="@+id/cpuIndicator"
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:src="@drawable/dot_green"
+                        android:layout_marginEnd="6dp" />
 
                     <TextView
                         android:id="@+id/batteryLabel"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:text="Battery: --"
                         android:textSize="11sp"
-                        android:textColor="#444444"
-                        android:layout_marginTop="4dp"/>
+                        android:textColor="#94A3B8" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Privacy"
+                        android:textSize="11sp"
+                        android:textColor="#94A3B8"
+                        android:layout_marginEnd="4dp" />
+
+                    <Switch
+                        android:id="@+id/privacyModeToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
@@ -295,7 +311,10 @@
         android:layout_below="@id/insightsContainer"
         android:layout_above="@+id/inputArea"
         android:clipToPadding="false"
-        android:padding="16dp">
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
 
         <LinearLayout
             android:id="@+id/chatContainer"
@@ -311,12 +330,13 @@
                 android:padding="12dp"
                 android:visibility="gone"
                 android:layout_marginBottom="16dp">
+
                 <TextView
                     android:id="@+id/thinkingText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Thinking..."
-                    android:textColor="#666666"
+                    android:textColor="#94A3B8"
                     android:textSize="14sp" />
             </LinearLayout>
         </LinearLayout>
@@ -327,12 +347,10 @@
         android:id="@+id/inputArea"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:background="@color/white"
+        android:layout_above="@+id/floatingBottomNav"
+        android:background="@color/dark_bg"
         android:orientation="vertical"
-        android:elevation="8dp">
-
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0" />
+        android:elevation="6dp">
 
         <!-- Image Attachment Preview Box (visible when image attached) -->
         <LinearLayout
@@ -341,7 +359,7 @@
             android:layout_height="wrap_content"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:paddingTop="8dp"
+            android:paddingTop="6dp"
             android:paddingBottom="4dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
@@ -362,7 +380,7 @@
                 android:layout_marginStart="8dp"
                 android:text="image.jpg"
                 android:textSize="12sp"
-                android:textColor="#333333"
+                android:textColor="#F1F5F9"
                 android:singleLine="true"
                 android:ellipsize="middle" />
 
@@ -372,60 +390,168 @@
                 android:layout_height="28dp"
                 android:src="@drawable/ic_close"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#F44336"
+                app:tint="#F87171"
                 android:scaleType="fitCenter" />
         </LinearLayout>
 
+        <!-- Input Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="12dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
+            <!-- Quick Overflow Menu Button -->
             <ImageButton
                 android:id="@+id/menuButton"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_marginEnd="6dp"
-                android:background="@drawable/input_bg"
+                android:background="@drawable/bg_circular_action_btn"
                 android:src="@drawable/ic_menu"
-                app:tint="#666666" />
+                app:tint="#94A3B8"
+                android:contentDescription="Menu" />
 
             <!-- Gallery Image Picker Button -->
             <ImageButton
                 android:id="@+id/btnAttachImage"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_marginEnd="8dp"
-                android:background="@drawable/input_bg"
+                android:background="@drawable/bg_circular_action_btn"
                 android:src="@drawable/ic_image"
-                app:tint="#666666"
+                app:tint="#94A3B8"
                 android:contentDescription="Attach Image" />
 
+            <!-- Capsule Text Input -->
             <EditText
                 android:id="@+id/messageInput"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_weight="1"
-                android:background="@drawable/input_bg"
+                android:background="@drawable/bg_chat_input_pill"
                 android:hint="Ask anything here..."
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:textSize="14sp"
-                android:textColor="#222222"
-                android:textColorHint="#777777"
+                android:textColor="#F1F5F9"
+                android:textColorHint="#64748B"
                 android:inputType="textLongMessage" />
 
+            <!-- Circular Electric Blue Send Button -->
             <ImageButton
                 android:id="@+id/sendButton"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
-                android:layout_marginStart="10dp"
-                android:background="@drawable/input_bg"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_circular_action_btn"
                 android:backgroundTint="@color/btn_blue"
                 android:src="@drawable/ic_send"
-                app:tint="@color/white" />
+                app:tint="@color/white"
+                android:contentDescription="Send" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Modern Floating Pill Bottom Navigation Bar (Ref: Image 1) -->
+    <LinearLayout
+        android:id="@+id/floatingBottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_floating_bottom_bar"
+        android:elevation="12dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp">
+
+        <!-- Tab 1: Chat (Active) -->
+        <LinearLayout
+            android:id="@+id/tabNavChat"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_floating_nav_active"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_chat"
+                app:tint="#38BDF8"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Chat"
+                android:textColor="#38BDF8"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Tab 2: Models -->
+        <LinearLayout
+            android:id="@+id/tabNavModels"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_download"
+                app:tint="#94A3B8"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Models"
+                android:textColor="#94A3B8"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Tab 3: Settings -->
+        <LinearLayout
+            android:id="@+id/tabNavSettings"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_settings"
+                app:tint="#94A3B8"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Settings"
+                android:textColor="#94A3B8"
+                android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 

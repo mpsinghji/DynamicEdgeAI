@@ -185,9 +185,35 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Floating Bottom Navigation (Ref: Image 1)
+        findViewById<View>(R.id.tabNavChat)?.setOnClickListener {
+            scrollToBottom()
+        }
+        findViewById<View>(R.id.tabNavModels)?.setOnClickListener {
+            startActivity(Intent(this, ModelManagerActivity::class.java))
+        }
+        findViewById<View>(R.id.tabNavSettings)?.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        // Auto-hide floating bottom navigation when soft keyboard opens
+        val rootLayout = findViewById<View>(R.id.mainRootLayout)
+        val floatingNav = findViewById<View>(R.id.floatingBottomNav)
+        rootLayout?.viewTreeObserver?.addOnGlobalLayoutListener {
+            val r = android.graphics.Rect()
+            rootLayout.getWindowVisibleDisplayFrame(r)
+            val screenHeight = rootLayout.rootView.height
+            val keypadHeight = screenHeight - r.bottom
+            if (keypadHeight > screenHeight * 0.15) {
+                floatingNav?.visibility = View.GONE
+            } else {
+                floatingNav?.visibility = View.VISIBLE
+            }
+        }
+
         // Default Visible Insights
         insightsContainer.visibility = View.VISIBLE
-        insightsChevron.rotation = 0f
+        insightsChevron.rotation = 270f
 
         insightsToggle.setOnClickListener { toggleInsights() }
         sendButton.setOnClickListener { trySendMessage() }
@@ -520,9 +546,10 @@ class MainActivity : AppCompatActivity() {
     // ── Message Routing & Generation ──────────────────────────────────────────
 
     private fun toggleInsights() {
+        val detailPanel = findViewById<View>(R.id.insightsDetailPanel) ?: return
         isInsightsVisible = !isInsightsVisible
-        insightsContainer.visibility = if (isInsightsVisible) View.VISIBLE else View.GONE
-        insightsChevron.animate().rotation(if (isInsightsVisible) 0f else 180f).setDuration(300).start()
+        detailPanel.visibility = if (isInsightsVisible) View.VISIBLE else View.GONE
+        insightsChevron.animate().rotation(if (isInsightsVisible) 90f else 270f).setDuration(250).start()
     }
 
     private fun trySendMessage() {
@@ -962,7 +989,12 @@ class MainActivity : AppCompatActivity() {
             else -> detail.strategy
         }
         insightModeText.text = displayStrategy.name
-        val modeColor = when(displayStrategy) { Strategy.LOCAL -> R.color.mode_local; Strategy.CLOUD -> R.color.accent_blue }
-        insightModeText.setTextColor(ContextCompat.getColor(this, modeColor))
+        if (displayStrategy == Strategy.LOCAL) {
+            insightModeText.setBackgroundResource(R.drawable.bg_status_badge_local)
+            insightModeText.setTextColor(ContextCompat.getColor(this, R.color.mode_local))
+        } else {
+            insightModeText.setBackgroundResource(R.drawable.bg_status_badge_cloud)
+            insightModeText.setTextColor(ContextCompat.getColor(this, R.color.accent_blue))
+        }
     }
 }

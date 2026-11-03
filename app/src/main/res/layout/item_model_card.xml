@@ -4,9 +4,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="3dp"
-    app:cardBackgroundColor="#FFFFFF">
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="#131924">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -29,7 +29,7 @@
                 android:text="Model Name"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:textColor="#333333"
+                android:textColor="#F1F5F9"
                 android:singleLine="true"
                 android:ellipsize="end" />
 
@@ -40,7 +40,7 @@
                 android:background="@drawable/badge_recommended"
                 android:text="★ Recommended"
                 android:textSize="10sp"
-                android:textColor="#E65100"
+                android:textColor="#FBBF24"
                 android:textStyle="bold"
                 android:visibility="gone"
                 android:layout_marginStart="8dp" />
@@ -52,7 +52,7 @@
                 android:background="@drawable/badge_status"
                 android:text="● Active"
                 android:textSize="10sp"
-                android:textColor="#2E7D32"
+                android:textColor="#4ADE80"
                 android:textStyle="bold"
                 android:visibility="gone"
                 android:layout_marginStart="6dp" />
@@ -66,7 +66,7 @@
             android:layout_marginTop="4dp"
             android:text="Model description"
             android:textSize="12sp"
-            android:textColor="#777777" />
+            android:textColor="#94A3B8" />
 
         <!-- Row 3: Size + Status -->
         <LinearLayout
@@ -82,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:text="Size: --"
                 android:textSize="11sp"
-                android:textColor="#999999" />
+                android:textColor="#64748B" />
 
             <View
                 android:layout_width="0dp"
@@ -95,7 +95,7 @@
                 android:layout_height="wrap_content"
                 android:text="Not Downloaded"
                 android:textSize="11sp"
-                android:textColor="#999999" />
+                android:textColor="#64748B" />
         </LinearLayout>
 
         <!-- Row 4: Progress bar and real-time speed monitoring (visible during download) -->
@@ -112,6 +112,7 @@
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="8dp"
+                android:progressDrawable="@drawable/progress_bar_blue"
                 android:progress="0"
                 android:max="100" />
 
@@ -127,7 +128,7 @@
                     android:layout_height="wrap_content"
                     android:text="0 MB / 0 MB"
                     android:textSize="11sp"
-                    android:textColor="#555555" />
+                    android:textColor="#94A3B8" />
 
                 <View
                     android:layout_width="0dp"
@@ -141,7 +142,7 @@
                     android:text="0%"
                     android:textSize="11sp"
                     android:textStyle="bold"
-                    android:textColor="#1E88E5" />
+                    android:textColor="#38BDF8" />
             </LinearLayout>
 
             <LinearLayout
@@ -156,7 +157,7 @@
                     android:layout_height="wrap_content"
                     android:text="Speed: --"
                     android:textSize="10sp"
-                    android:textColor="#666666" />
+                    android:textColor="#38BDF8" />
 
                 <View
                     android:layout_width="0dp"
@@ -169,7 +170,7 @@
                     android:layout_height="wrap_content"
                     android:text="Remaining: --"
                     android:textSize="10sp"
-                    android:textColor="#666666" />
+                    android:textColor="#94A3B8" />
             </LinearLayout>
 
             <TextView
@@ -179,7 +180,7 @@
                 android:layout_marginTop="2dp"
                 android:text="Downloading..."
                 android:textSize="10sp"
-                android:textColor="#888888" />
+                android:textColor="#64748B" />
         </LinearLayout>
 
         <!-- Row 5: Action buttons -->
@@ -207,13 +208,13 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_download"
-                    app:tint="#1E88E5" />
+                    app:tint="#38BDF8" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Download"
                     android:textSize="12sp"
-                    android:textColor="#1E88E5"
+                    android:textColor="#38BDF8"
                     android:textStyle="bold"
                     android:layout_marginStart="4dp" />
             </LinearLayout>
@@ -226,7 +227,7 @@
                 android:layout_marginStart="8dp"
                 android:src="@drawable/ic_pause"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#666666"
+                app:tint="#94A3B8"
                 android:visibility="gone"
                 android:contentDescription="Pause" />
 
@@ -236,9 +237,9 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_marginStart="8dp"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:src="@drawable/ic_close"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#F44336"
+                app:tint="#F87171"
                 android:visibility="gone"
                 android:contentDescription="Cancel" />
 
@@ -258,13 +259,13 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_repair"
-                    app:tint="#FF9800" />
+                    app:tint="#FBBF24" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Repair"
                     android:textSize="12sp"
-                    android:textColor="#FF9800"
+                    android:textColor="#FBBF24"
                     android:textStyle="bold"
                     android:layout_marginStart="4dp" />
             </LinearLayout>
@@ -285,13 +286,13 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_delete"
-                    app:tint="#F44336" />
+                    app:tint="#F87171" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Uninstall"
                     android:textSize="12sp"
-                    android:textColor="#F44336"
+                    android:textColor="#F87171"
                     android:textStyle="bold"
                     android:layout_marginStart="4dp" />
             </LinearLayout>
@@ -314,7 +315,7 @@
                     android:layout_height="wrap_content"
                     android:text="Use This"
                     android:textSize="12sp"
-                    android:textColor="#2E7D32"
+                    android:textColor="#4ADE80"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
