@@ -730,14 +730,35 @@ class MainActivity : AppCompatActivity() {
                 val startTime = System.currentTimeMillis()
                 showThinking()
                 val state = lastKnownState ?: DeviceState()
-                
+
+                var streamingBubbleView: View? = null
+                var streamingTextView: TextView? = null
+
+                val onPartialResponse: (String) -> Unit = { partialText ->
+                    runOnUiThread {
+                        if (streamingBubbleView == null) {
+                            hideThinking()
+                            val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_chat_ai, chatContainer, false)
+                            val tv = view.findViewById<TextView>(R.id.messageText)
+                            view.findViewById<View>(R.id.executionInfo).visibility = View.GONE
+                            streamingBubbleView = view
+                            streamingTextView = tv
+                            val index = chatContainer.indexOfChild(thinkingIndicator)
+                            chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
+                        }
+                        streamingTextView?.text = MarkdownFormatter.format(partialText, this@MainActivity)
+                        scrollToBottom()
+                    }
+                }
+
                 val result = messageRouter.routeMessage(
                     text = text,
                     isPrivacyModeOn = privacyModeToggle.isChecked,
                     state = state,
                     imagePath = imagePath,
                     providedHistory = contextHistory,
-                    overrideMode = ApiKeyManager.getInferenceOverride(this@MainActivity)
+                    overrideMode = ApiKeyManager.getInferenceOverride(this@MainActivity),
+                    onPartialResponse = onPartialResponse
                 )
 
                 val elapsedMs = System.currentTimeMillis() - startTime
@@ -758,8 +779,23 @@ class MainActivity : AppCompatActivity() {
                 )
                 conversationRepo.addMessage(aiMsg)
 
-                // Render in UI
-                renderAiBubble(aiMsg, result.detail, latency)
+                if (streamingBubbleView != null) {
+                    val view = streamingBubbleView!!
+                    view.findViewById<TextView>(R.id.messageText).text = MarkdownFormatter.format(result.response, this@MainActivity)
+                    val executionLayout = view.findViewById<View>(R.id.executionInfo)
+                    view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${result.detail.strategy.name}"
+                    val modelName = if (result.detail.strategy == Strategy.LOCAL) "${localModelRunner.currentModel.displayName} (On-Device)" else "Gemini 2.5 Flash (Cloud)"
+                    view.findViewById<TextView>(R.id.modelUsedText).text = "Model: $modelName"
+                    view.findViewById<TextView>(R.id.reasonText).text = "Reason: ${result.detail.reason}"
+                    view.findViewById<TextView>(R.id.latencyText).text = "Latency: $latency"
+                    view.findViewById<TextView>(R.id.networkUsedText).text = "Network Used: ${if (result.detail.strategy == Strategy.CLOUD) "Yes" else "No"}"
+                    executionLayout.visibility = View.VISIBLE
+                    view.findViewById<ImageButton>(R.id.copyButton).setOnClickListener {
+                        copyToClipboard(result.response)
+                    }
+                } else {
+                    renderAiBubble(aiMsg, result.detail, latency)
+                }
                 scrollToBottom()
             } catch (t: Throwable) {
                 Log.e("MainActivity", "Failed to process message", t)
@@ -840,13 +876,34 @@ class MainActivity : AppCompatActivity() {
                 val contextHistory = contextBuilder.buildInferenceHistory(recentMessages, conv.summary)
                 val state = lastKnownState ?: DeviceState()
 
+                var streamingBubbleView: View? = null
+                var streamingTextView: TextView? = null
+
+                val onPartialResponse: (String) -> Unit = { partialText ->
+                    runOnUiThread {
+                        if (streamingBubbleView == null) {
+                            hideThinking()
+                            val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_chat_ai, chatContainer, false)
+                            val tv = view.findViewById<TextView>(R.id.messageText)
+                            view.findViewById<View>(R.id.executionInfo).visibility = View.GONE
+                            streamingBubbleView = view
+                            streamingTextView = tv
+                            val index = chatContainer.indexOfChild(thinkingIndicator)
+                            chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
+                        }
+                        streamingTextView?.text = MarkdownFormatter.format(partialText, this@MainActivity)
+                        scrollToBottom()
+                    }
+                }
+
                 val result = messageRouter.routeMessage(
                     text = newContent,
                     isPrivacyModeOn = privacyModeToggle.isChecked,
                     state = state,
                     imagePath = oldMessage.attachmentPath,
                     providedHistory = contextHistory,
-                    overrideMode = ApiKeyManager.getInferenceOverride(this@MainActivity)
+                    overrideMode = ApiKeyManager.getInferenceOverride(this@MainActivity),
+                    onPartialResponse = onPartialResponse
                 )
 
                 hideThinking()
@@ -857,7 +914,24 @@ class MainActivity : AppCompatActivity() {
                     content = result.response
                 )
                 conversationRepo.addMessage(aiMsg)
-                renderAiBubble(aiMsg, result.detail, "Regenerated")
+
+                if (streamingBubbleView != null) {
+                    val view = streamingBubbleView!!
+                    view.findViewById<TextView>(R.id.messageText).text = MarkdownFormatter.format(result.response, this@MainActivity)
+                    val executionLayout = view.findViewById<View>(R.id.executionInfo)
+                    view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${result.detail.strategy.name}"
+                    val modelName = if (result.detail.strategy == Strategy.LOCAL) "${localModelRunner.currentModel.displayName} (On-Device)" else "Gemini 2.5 Flash (Cloud)"
+                    view.findViewById<TextView>(R.id.modelUsedText).text = "Model: $modelName"
+                    view.findViewById<TextView>(R.id.reasonText).text = "Reason: ${result.detail.reason}"
+                    view.findViewById<TextView>(R.id.latencyText).text = "Latency: Regenerated"
+                    view.findViewById<TextView>(R.id.networkUsedText).text = "Network Used: ${if (result.detail.strategy == Strategy.CLOUD) "Yes" else "No"}"
+                    executionLayout.visibility = View.VISIBLE
+                    view.findViewById<ImageButton>(R.id.copyButton).setOnClickListener {
+                        copyToClipboard(result.response)
+                    }
+                } else {
+                    renderAiBubble(aiMsg, result.detail, "Regenerated")
+                }
                 scrollToBottom()
             } catch (t: Throwable) {
                 Log.e("MainActivity", "Failed to regenerate edited message", t)

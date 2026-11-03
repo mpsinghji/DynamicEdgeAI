@@ -26,7 +26,8 @@ class MessageRouter(
         state: DeviceState,
         imagePath: String? = null,
         providedHistory: List<ChatMessage>? = null,
-        overrideMode: com.dynamicedgeai.util.InferenceOverrideMode = com.dynamicedgeai.util.InferenceOverrideMode.OFF
+        overrideMode: com.dynamicedgeai.util.InferenceOverrideMode = com.dynamicedgeai.util.InferenceOverrideMode.OFF,
+        onPartialResponse: ((String) -> Unit)? = null
     ): RouterResult {
         // Use provided conversation history or internal buffer
         val historyToUse = if (providedHistory != null) {
@@ -36,9 +37,18 @@ class MessageRouter(
             internalHistory.takeLast(MAX_HISTORY).toMutableList()
         }
 
-        val effectivePrivacy = isPrivacyModeOn || overrideMode == com.dynamicedgeai.util.InferenceOverrideMode.LOCAL
+        val hasImage = !imagePath.isNullOrBlank()
+        val localSupportsImage = ModelCapabilityRegistry.supportsImage(localModelRunner.currentModel)
 
         var strategyDetail = when {
+            // Priority 1: User explicitly attached photos, but active local model is text-only (e.g. Gemma 4).
+            // Unless the strict on-device Privacy switch is explicitly turned ON, route to Gemini Vision!
+            hasImage && !localSupportsImage && !isPrivacyModeOn -> {
+                StrategyDetail(
+                    Strategy.CLOUD,
+                    "Routing to Gemini Vision (${localModelRunner.currentModel.displayName} is text-only)"
+                )
+            }
             overrideMode == com.dynamicedgeai.util.InferenceOverrideMode.LOCAL -> {
                 StrategyDetail(Strategy.LOCAL, "Settings Override: Forced LOCAL / Edge AI")
             }
@@ -54,21 +64,21 @@ class MessageRouter(
         }
 
         // Multimodal Image Input Check
-        val hasImage = !imagePath.isNullOrBlank()
         if (hasImage) {
-            val localSupportsImage = ModelCapabilityRegistry.supportsImage(localModelRunner.currentModel)
-
-            if (effectivePrivacy && !localSupportsImage) {
+            if (isPrivacyModeOn && !localSupportsImage) {
                 return RouterResult(
-                    "⚠️ The selected on-device model (${localModelRunner.currentModel.displayName}) is a text-only language model.\n\n" +
-                            "To analyze images, please set Inference Strategy to CLOUD or OFF (Adaptive) in Settings so Gemini Vision can process your photos.",
-                    StrategyDetail(Strategy.LOCAL, "Image input unsupported by ${localModelRunner.currentModel.displayName}")
+                    "🔒 Privacy Mode is ON (Strict On-Device AI), but ${localModelRunner.currentModel.displayName} is a text-only language model.\n\n" +
+                            "To analyze photos, please toggle Privacy Mode OFF above so Gemini Vision can process your images.",
+                    StrategyDetail(Strategy.LOCAL, "Image input unsupported by ${localModelRunner.currentModel.displayName} while Privacy Mode ON")
                 )
             }
 
-            if (!effectivePrivacy && !localSupportsImage) {
+            if (!localSupportsImage) {
                 // Auto-route to cloud Gemini for multimodal image recognition
-                strategyDetail = StrategyDetail(Strategy.CLOUD, "Routing to Cloud: Image analysis required and local model is text-only")
+                strategyDetail = StrategyDetail(
+                    Strategy.CLOUD,
+                    "Routing to Cloud: Image analysis required and ${localModelRunner.currentModel.displayName} is text-only"
+                )
             }
         }
 
@@ -81,7 +91,7 @@ class MessageRouter(
                 if (available != null) {
                     localModelRunner.switchModel(available)
                     Log.d("MessageRouter", "Auto-switched to ${available.displayName} (current model unavailable)")
-                } else if (effectivePrivacy) {
+                } else if (isPrivacyModeOn) {
                     return RouterResult(
                         "⚠️ No local model is available. Please download a model from the Model Manager to use on-device inference.",
                         StrategyDetail(Strategy.LOCAL, "No local model available — download required")
@@ -96,7 +106,7 @@ class MessageRouter(
         Log.d("MessageRouter", "Routing with strategy: ${strategyDetail.strategy}")
 
         val response = when (strategyDetail.strategy) {
-            Strategy.LOCAL -> localModelRunner.runInference(historyToUse, imagePath)
+            Strategy.LOCAL -> localModelRunner.runInference(historyToUse, imagePath, onPartialResponse)
             Strategy.CLOUD -> cloudModelRunner.runInference(text, imagePath)
         }
 

@@ -197,8 +197,9 @@ class LocalModelRunner private constructor(context: Context) {
         System.gc()
 
         val isLargeModel = currentModel.expectedSizeBytes > 2_000_000_000L // e.g. Gemma 4 E4B-it (3.4 GB)
-        val maxTokens = if (isLargeModel) 512 else 1024
-        val numImages = if (hasImage && currentModel.isLiteRtLm) 1 else 0
+        val maxTokens = if (isLargeModel) 1024 else 2048
+        val localSupportsImage = ModelCapabilityRegistry.supportsImage(currentModel)
+        val numImages = if (hasImage && localSupportsImage) 1 else 0
 
         Log.i(tag, "Loading Gemma via MediaPipe from ${modelFile.absolutePath} (largeModel=$isLargeModel, maxTokens=$maxTokens, numImages=$numImages)")
 
@@ -221,11 +222,11 @@ class LocalModelRunner private constructor(context: Context) {
             Log.w(tag, "Primary backend $preferredBackend failed: ${err.message}, attempting conservative CPU fallback...")
         }
 
-        // Fallback: CPU Backend with conservative 384 tokens
+        // Fallback: CPU Backend with conservative 768 tokens
         return try {
             val fallbackOptions = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile.absolutePath)
-                .setMaxTokens(384)
+                .setMaxTokens(if (isLargeModel) 768 else 1024)
                 .setMaxNumImages(numImages)
                 .setPreferredBackend(LlmInference.Backend.CPU)
                 .build()
@@ -270,7 +271,8 @@ class LocalModelRunner private constructor(context: Context) {
 
     suspend fun runInference(
         history: List<ChatMessage>,
-        imagePath: String? = null
+        imagePath: String? = null,
+        onPartialResponse: ((String) -> Unit)? = null
     ): String = withContext(Dispatchers.Default) {
         val hasImage = !imagePath.isNullOrBlank()
         val ready = ensureInitialized(hasImage)
@@ -292,11 +294,11 @@ class LocalModelRunner private constructor(context: Context) {
 
                 if (!hasImage) {
                     val formatted = applyGemmaTemplate(latestPrompt)
-                    runGemmaSessionInference(engine, formatted, null)
+                    runGemmaSessionInference(engine, formatted, null, onPartialResponse)
                 } else {
                     // Multimodal path (with image)
                     val formatted = applyGemmaTemplate(latestPrompt)
-                    runGemmaSessionInference(engine, formatted, imagePath)
+                    runGemmaSessionInference(engine, formatted, imagePath, onPartialResponse)
                 }
             }
         } catch (e: Throwable) {
@@ -306,14 +308,15 @@ class LocalModelRunner private constructor(context: Context) {
     }
 
     /**
-     * Executes Gemma inference with realtime stop-sequence token streaming.
+     * Executes Gemma inference with realtime token streaming and stop-sequence cancellation.
      * Cancels generation instantly when <turn|>, <eos>, or <end_of_turn> is emitted,
-     * preventing 500+ token runaway generation loops and reducing latency from 60s to <1s.
+     * preventing runaway token loops while streaming live tokens to UI.
      */
     private suspend fun runGemmaSessionInference(
         engine: LlmInference,
         formattedPrompt: String,
-        imagePath: String?
+        imagePath: String?,
+        onPartialResponse: ((String) -> Unit)? = null
     ): String {
         val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
             .setTemperature(0.7f)
@@ -323,7 +326,7 @@ class LocalModelRunner private constructor(context: Context) {
         val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
 
         return try {
-            if (!imagePath.isNullOrBlank()) {
+            if (!imagePath.isNullOrBlank() && ModelCapabilityRegistry.supportsImage(currentModel)) {
                 val paths = imagePath.split("|").filter { it.isNotBlank() }
                 for (path in paths) {
                     val imgFile = File(path)
@@ -339,7 +342,7 @@ class LocalModelRunner private constructor(context: Context) {
 
             session.addQueryChunk(formattedPrompt)
 
-            // Asynchronous token generation with early stop-token cancellation
+            // Asynchronous token generation with early stop-token cancellation and live streaming
             val accumulated = StringBuilder()
             val deferred = CompletableDeferred<String>()
 
@@ -361,19 +364,22 @@ class LocalModelRunner private constructor(context: Context) {
                                 return@generateResponseAsync
                             }
                         }
+
+                        // Stream clean partial text live to UI listener
+                        onPartialResponse?.invoke(cleanGemmaResponse(textSoFar))
                     }
                     if (done && !deferred.isCompleted) {
                         deferred.complete(accumulated.toString())
                     }
                 }
 
-                // Await response with 45s safety timeout
-                val raw = withTimeout(45_000L) {
+                // Generous 180s (3-minute) timeout for full long-form responses without premature cutoff
+                val raw = withTimeout(180_000L) {
                     deferred.await()
                 }
                 cleanGemmaResponse(raw)
             } catch (asyncErr: Throwable) {
-                Log.w(tag, "Async stream failed or cancelled: ${asyncErr.message}, cleaning result")
+                Log.w(tag, "Async stream completed or timeout: ${asyncErr.message}, cleaning result")
                 if (accumulated.isNotEmpty()) {
                     cleanGemmaResponse(accumulated.toString())
                 } else {
