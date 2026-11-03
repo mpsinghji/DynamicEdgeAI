@@ -733,21 +733,34 @@ class MainActivity : AppCompatActivity() {
 
                 var streamingBubbleView: View? = null
                 var streamingTextView: TextView? = null
+                var latestPartialText = ""
+                var lastRenderTime = 0L
+                val streamingHandler = Handler(Looper.getMainLooper())
+
+                val updateStreamingUiRunnable = Runnable {
+                    val textToRender = latestPartialText
+                    if (streamingBubbleView == null) {
+                        hideThinking()
+                        val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_chat_ai, chatContainer, false)
+                        val tv = view.findViewById<TextView>(R.id.messageText)
+                        tv.setTextIsSelectable(false)
+                        view.findViewById<View>(R.id.executionInfo).visibility = View.GONE
+                        streamingBubbleView = view
+                        streamingTextView = tv
+                        val index = chatContainer.indexOfChild(thinkingIndicator)
+                        chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
+                    }
+                    streamingTextView?.text = MarkdownFormatter.format(textToRender, this@MainActivity)
+                    scrollToBottom(force = false)
+                }
 
                 val onPartialResponse: (String) -> Unit = { partialText ->
-                    runOnUiThread {
-                        if (streamingBubbleView == null) {
-                            hideThinking()
-                            val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_chat_ai, chatContainer, false)
-                            val tv = view.findViewById<TextView>(R.id.messageText)
-                            view.findViewById<View>(R.id.executionInfo).visibility = View.GONE
-                            streamingBubbleView = view
-                            streamingTextView = tv
-                            val index = chatContainer.indexOfChild(thinkingIndicator)
-                            chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
-                        }
-                        streamingTextView?.text = MarkdownFormatter.format(partialText, this@MainActivity)
-                        scrollToBottom()
+                    latestPartialText = partialText
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (now - lastRenderTime >= 120L) {
+                        lastRenderTime = now
+                        streamingHandler.removeCallbacks(updateStreamingUiRunnable)
+                        streamingHandler.post(updateStreamingUiRunnable)
                     }
                 }
 
@@ -761,6 +774,7 @@ class MainActivity : AppCompatActivity() {
                     onPartialResponse = onPartialResponse
                 )
 
+                streamingHandler.removeCallbacks(updateStreamingUiRunnable)
                 val elapsedMs = System.currentTimeMillis() - startTime
                 val latency = if (elapsedMs < 60_000) {
                     String.format(java.util.Locale.US, "%.1fs", elapsedMs / 1000.0)
@@ -781,7 +795,9 @@ class MainActivity : AppCompatActivity() {
 
                 if (streamingBubbleView != null) {
                     val view = streamingBubbleView!!
-                    view.findViewById<TextView>(R.id.messageText).text = MarkdownFormatter.format(result.response, this@MainActivity)
+                    val tv = view.findViewById<TextView>(R.id.messageText)
+                    tv.text = MarkdownFormatter.format(result.response, this@MainActivity)
+                    tv.setTextIsSelectable(true)
                     val executionLayout = view.findViewById<View>(R.id.executionInfo)
                     view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${result.detail.strategy.name}"
                     val modelName = if (result.detail.strategy == Strategy.LOCAL) "${localModelRunner.currentModel.displayName} (On-Device)" else "Gemini 2.5 Flash (Cloud)"
@@ -796,7 +812,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     renderAiBubble(aiMsg, result.detail, latency)
                 }
-                scrollToBottom()
+                scrollToBottom(force = true)
             } catch (t: Throwable) {
                 Log.e("MainActivity", "Failed to process message", t)
                 hideThinking()
@@ -878,21 +894,34 @@ class MainActivity : AppCompatActivity() {
 
                 var streamingBubbleView: View? = null
                 var streamingTextView: TextView? = null
+                var latestPartialText = ""
+                var lastRenderTime = 0L
+                val streamingHandler = Handler(Looper.getMainLooper())
+
+                val updateStreamingUiRunnable = Runnable {
+                    val textToRender = latestPartialText
+                    if (streamingBubbleView == null) {
+                        hideThinking()
+                        val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_chat_ai, chatContainer, false)
+                        val tv = view.findViewById<TextView>(R.id.messageText)
+                        tv.setTextIsSelectable(false)
+                        view.findViewById<View>(R.id.executionInfo).visibility = View.GONE
+                        streamingBubbleView = view
+                        streamingTextView = tv
+                        val index = chatContainer.indexOfChild(thinkingIndicator)
+                        chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
+                    }
+                    streamingTextView?.text = MarkdownFormatter.format(textToRender, this@MainActivity)
+                    scrollToBottom(force = false)
+                }
 
                 val onPartialResponse: (String) -> Unit = { partialText ->
-                    runOnUiThread {
-                        if (streamingBubbleView == null) {
-                            hideThinking()
-                            val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_chat_ai, chatContainer, false)
-                            val tv = view.findViewById<TextView>(R.id.messageText)
-                            view.findViewById<View>(R.id.executionInfo).visibility = View.GONE
-                            streamingBubbleView = view
-                            streamingTextView = tv
-                            val index = chatContainer.indexOfChild(thinkingIndicator)
-                            chatContainer.addView(view, if (index != -1) index else chatContainer.childCount)
-                        }
-                        streamingTextView?.text = MarkdownFormatter.format(partialText, this@MainActivity)
-                        scrollToBottom()
+                    latestPartialText = partialText
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (now - lastRenderTime >= 120L) {
+                        lastRenderTime = now
+                        streamingHandler.removeCallbacks(updateStreamingUiRunnable)
+                        streamingHandler.post(updateStreamingUiRunnable)
                     }
                 }
 
@@ -906,6 +935,7 @@ class MainActivity : AppCompatActivity() {
                     onPartialResponse = onPartialResponse
                 )
 
+                streamingHandler.removeCallbacks(updateStreamingUiRunnable)
                 hideThinking()
 
                 val aiMsg = MessageEntity(
@@ -917,7 +947,9 @@ class MainActivity : AppCompatActivity() {
 
                 if (streamingBubbleView != null) {
                     val view = streamingBubbleView!!
-                    view.findViewById<TextView>(R.id.messageText).text = MarkdownFormatter.format(result.response, this@MainActivity)
+                    val tv = view.findViewById<TextView>(R.id.messageText)
+                    tv.text = MarkdownFormatter.format(result.response, this@MainActivity)
+                    tv.setTextIsSelectable(true)
                     val executionLayout = view.findViewById<View>(R.id.executionInfo)
                     view.findViewById<TextView>(R.id.modeTitle).text = "Execution Info: ${result.detail.strategy.name}"
                     val modelName = if (result.detail.strategy == Strategy.LOCAL) "${localModelRunner.currentModel.displayName} (On-Device)" else "Gemini 2.5 Flash (Cloud)"
@@ -932,7 +964,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     renderAiBubble(aiMsg, result.detail, "Regenerated")
                 }
-                scrollToBottom()
+                scrollToBottom(force = true)
             } catch (t: Throwable) {
                 Log.e("MainActivity", "Failed to regenerate edited message", t)
                 hideThinking()
@@ -1072,8 +1104,15 @@ class MainActivity : AppCompatActivity() {
         thinkingIndicator.visibility = View.GONE
     }
 
-    private fun scrollToBottom() { 
-        chatScrollView.post { chatScrollView.fullScroll(View.FOCUS_DOWN) } 
+    private fun scrollToBottom(force: Boolean = false) { 
+        chatScrollView.post { 
+            val scrollBottom = chatScrollView.scrollY + chatScrollView.height
+            val contentBottom = chatContainer.bottom
+            val distanceToBottom = contentBottom - scrollBottom
+            if (force || distanceToBottom < 300) {
+                chatScrollView.smoothScrollTo(0, contentBottom)
+            }
+        } 
     }
 
     // ── Bottom Sheet Menu ─────────────────────────────────────────────────────

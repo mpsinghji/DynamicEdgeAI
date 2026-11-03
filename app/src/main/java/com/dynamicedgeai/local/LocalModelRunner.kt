@@ -254,6 +254,53 @@ class LocalModelRunner private constructor(context: Context) {
 
     private val STOP_TOKENS = listOf("<end_of_turn>", "<turn|>", "<eos>", "<start_of_turn>", "<bos>", "<pad>")
 
+    /**
+     * Detects degenerative repetition loops in generated text.
+     * When LLMs lose coherence, they frequently repeat headers (e.g. multiple "####"),
+     * bullet points, or identical short phrases in a runaway loop.
+     */
+    private fun detectRepetitionLoop(text: String): Int {
+        if (text.length < 60) return -1
+
+        // 1. Repeating markdown header lines (3+ headers with only whitespace between them)
+        val headerMatch = Regex("(?:\n\\s*#{2,6}[^\n]*\\s*){3,}").find(text)
+        if (headerMatch != null && headerMatch.range.first > 30) {
+            return headerMatch.range.first
+        }
+
+        // 2. Line repetition: same non-empty line (>= 3 chars) appears 3+ times in the last 6 non-empty lines
+        val lines = text.split('\n').map { it.trim() }.filter { it.isNotBlank() }
+        if (lines.size >= 5) {
+            val recent = lines.takeLast(6)
+            for (line in recent) {
+                if (line.length >= 3 && recent.count { it == line } >= 3) {
+                    val lastIdx = text.lastIndexOf(line)
+                    val firstIdx = text.indexOf(line, maxOf(0, lastIdx - 400))
+                    if (firstIdx > 30) {
+                        return firstIdx
+                    }
+                }
+            }
+        }
+
+        // 3. Repeated short phrase in trailing 200 chars
+        val tailLen = minOf(text.length, 200)
+        val tail = text.substring(text.length - tailLen)
+        for (len in 16 downTo 8) {
+            if (tail.length >= len * 3) {
+                val chunk = tail.substring(tail.length - len)
+                val count = tail.split(chunk).size - 1
+                if (count >= 3) {
+                    val firstInTail = tail.indexOf(chunk)
+                    val cut = text.length - tailLen + firstInTail
+                    if (cut > 30) return cut
+                }
+            }
+        }
+
+        return -1
+    }
+
     private fun cleanGemmaResponse(raw: String): String {
         var r = raw
         // Truncate at the very first occurrence of any stop/control token
@@ -262,6 +309,10 @@ class LocalModelRunner private constructor(context: Context) {
             if (idx != -1) {
                 r = r.substring(0, idx)
             }
+        }
+        val repCut = detectRepetitionLoop(r)
+        if (repCut != -1) {
+            r = r.substring(0, repCut)
         }
         STOP_TOKENS.forEach { r = r.replace(it, "") }
         return r.replace(Regex("\n{3,}"), "\n\n").trim()
@@ -319,8 +370,9 @@ class LocalModelRunner private constructor(context: Context) {
         onPartialResponse: ((String) -> Unit)? = null
     ): String {
         val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
-            .setTemperature(0.7f)
+            .setTemperature(0.6f)
             .setTopK(40)
+            .setTopP(0.85f)
             .setRandomSeed(Random.nextInt())
             .build()
         val session = LlmInferenceSession.createFromOptions(engine, sessionOptions)
@@ -365,11 +417,22 @@ class LocalModelRunner private constructor(context: Context) {
                             }
                         }
 
+                        // Check degenerative repetition loops (prevents 2+ minute stalls on repetitive #### etc.)
+                        val repCut = detectRepetitionLoop(textSoFar)
+                        if (repCut != -1) {
+                            try { session.cancelGenerateResponseAsync() } catch (_: Throwable) {}
+                            val clean = textSoFar.substring(0, repCut).trimEnd()
+                            if (!deferred.isCompleted) {
+                                deferred.complete(clean)
+                            }
+                            return@generateResponseAsync
+                        }
+
                         // Stream clean partial text live to UI listener
                         onPartialResponse?.invoke(cleanGemmaResponse(textSoFar))
                     }
                     if (done && !deferred.isCompleted) {
-                        deferred.complete(accumulated.toString())
+                        deferred.complete(cleanGemmaResponse(accumulated.toString()))
                     }
                 }
 
