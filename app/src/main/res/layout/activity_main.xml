@@ -124,6 +124,15 @@
         </LinearLayout>
     </RelativeLayout>
 
+    <!-- Floating Top Update Notification Banner (Auto-checks on start, auto-hides) -->
+    <include
+        layout="@layout/layout_update_popup_banner"
+        android:id="@+id/includedUpdateBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/header"
+        android:layout_marginTop="8dp" />
+
     <!-- Insights Card -->
     <LinearLayout
         android:id="@+id/insightsContainer"

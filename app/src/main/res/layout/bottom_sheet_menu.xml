@@ -190,6 +190,33 @@
                     android:textColor="#333333"
                     android:gravity="center" />
             </LinearLayout>
+
+            <!-- Gemini API Key / Settings -->
+            <LinearLayout
+                android:id="@+id/menuApiKey"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_key"
+                    android:background="@drawable/menu_icon_bg"
+                    android:padding="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="API Key"
+                    android:textSize="11sp"
+                    android:textColor="#333333"
+                    android:gravity="center" />
+            </LinearLayout>
         </LinearLayout>
     </HorizontalScrollView>
 

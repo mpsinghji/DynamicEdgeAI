@@ -17,7 +17,8 @@ android {
         versionName = "1.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "GEMINI_KEY", "\"AIzaSyCF7VizsgjqQQG3SFSE3CDw1hzMueFvvsM\"")
+        // Hardcoded API key removed; user configures their Gemini API key via in-app Settings
+        buildConfigField("String", "GEMINI_KEY", "\"\"")
         
         ndk {
             // Filter for common architectures to reduce APK size

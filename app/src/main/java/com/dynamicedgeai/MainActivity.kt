@@ -32,7 +32,10 @@ import com.dynamicedgeai.monitor.*
 import com.dynamicedgeai.router.ChatMessage
 import com.dynamicedgeai.router.MessageRouter
 import com.dynamicedgeai.updater.AppUpdateManager
+import com.dynamicedgeai.updater.UpdateBannerBinder
 import com.dynamicedgeai.updater.UpdateCardBinder
+import com.dynamicedgeai.updater.UpdateState
+import com.dynamicedgeai.util.ApiKeyManager
 import com.dynamicedgeai.util.AppVersion
 import com.dynamicedgeai.util.ModelStatus
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -56,7 +59,7 @@ class MainActivity : AppCompatActivity() {
     
     private val decisionEngine = DecisionEngine()
     private lateinit var localModelRunner: LocalModelRunner
-    private val cloudModelRunner = CloudModelRunner()
+    private val cloudModelRunner by lazy { CloudModelRunner(this) }
     private lateinit var messageRouter: MessageRouter
 
     // Persistence & Context Architecture
@@ -152,6 +155,30 @@ class MainActivity : AppCompatActivity() {
 
         // In-App Version display from single source of truth
         findViewById<TextView>(R.id.appSubtitleText)?.text = "Intelligent Adaptive AI System • ${AppVersion.shortLabel}"
+
+        // Wire Top Floating Update Banner & Auto-check on Startup
+        val updateBannerView = findViewById<View>(R.id.includedUpdateBanner)
+        if (updateBannerView != null) {
+            val bannerBinder = UpdateBannerBinder(updateBannerView, this) { state ->
+                when (state) {
+                    is UpdateState.UpdateAvailable -> {
+                        showBottomSheetMenu()
+                    }
+                    is UpdateState.DownloadCompleted -> {
+                        AppUpdateManager.getInstance().installUpdate(this, state.apkFile)
+                    }
+                    else -> {
+                        showBottomSheetMenu()
+                    }
+                }
+            }
+            bannerBinder.bind()
+
+            // Automatically check for updates on startup
+            lifecycleScope.launch {
+                AppUpdateManager.getInstance().checkForUpdate(this@MainActivity)
+            }
+        }
 
         // Default Visible Insights
         insightsContainer.visibility = View.VISIBLE
@@ -416,6 +443,49 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.setContentView(view)
+        dialog.show()
+    }
+
+    // ── Gemini API Key Configuration Dialog ───────────────────────────────────
+
+    private fun showApiKeyDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_api_key, null)
+        val txtStatus = dialogView.findViewById<TextView>(R.id.txtCurrentKeyStatus)
+        val editKey = dialogView.findViewById<EditText>(R.id.editApiKeyInput)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancelApiKey)
+        val btnClear = dialogView.findViewById<Button>(R.id.btnClearApiKey)
+        val btnSave = dialogView.findViewById<Button>(R.id.btnSaveApiKey)
+
+        txtStatus.text = "Current: ${ApiKeyManager.getMaskedApiKey(this)}"
+        if (ApiKeyManager.hasGeminiApiKey(this)) {
+            editKey.setText(ApiKeyManager.getGeminiApiKey(this))
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+
+        btnClear.setOnClickListener {
+            ApiKeyManager.clearGeminiApiKey(this)
+            Toast.makeText(this, "API Key cleared", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+
+        btnSave.setOnClickListener {
+            val input = editKey.text.toString().trim()
+            if (input.isEmpty()) {
+                Toast.makeText(this, "Please enter a valid API key", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            ApiKeyManager.setGeminiApiKey(this, input)
+            Toast.makeText(this, "Gemini API Key saved!", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+
         dialog.show()
     }
 
@@ -727,6 +797,11 @@ class MainActivity : AppCompatActivity() {
                     AppUpdateManager.getInstance().checkForUpdate(this@MainActivity)
                 }
             }
+        }
+
+        view.findViewById<View>(R.id.menuApiKey)?.setOnClickListener {
+            dialog.dismiss()
+            showApiKeyDialog()
         }
 
         // List downloaded local models

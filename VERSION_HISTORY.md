@@ -9,13 +9,22 @@
 **Git Tag:** `v1.1.2`  
 **Build Variant:** `release` & `debug` (compatible debug-signature for seamless in-place updates)  
 **Release APK Filename:** `DynamicEdgeAI-v1.1.2-release.apk`  
-**Release APK SHA-256:** `DD76FF7A71F974E9650BE3835852981A5A0F2C5DD8443F13369D79FC242D3F4F`  
+**Release APK SHA-256:** `F0663FDFF9674B03EB9CE2696987033C01C6E0D92FC9588F6EFD499723EA9371`  
 **Debug APK Filename:** `DynamicEdgeAI-v1.1.2-debug.apk`  
-**Debug APK SHA-256:** `7A224A53080A6F3B78A64B66B9D310FD94007E0231E0562E05E6DC9927A497AD`  
+**Debug APK SHA-256:** `7D25433B24C94B740980BC1E613AEE5C7AFCAD0C36C6112EB8DE185A844F3D36`  
 **Signing Certificate SHA-256:** `0940e42a8cbf0746bf7d48358eb0afbf43b77dcf0c4580069867370436893645` (CN=Android Debug)  
 **Deployment Status:** Built locally, verified, and ready for deployment.
 
 ### 🌟 New Features & Enhancements
+- **Startup Auto-Update Check & Floating Pill Notification:**
+  - Automated update check on application startup.
+  - Floating top capsule banner inspired by modern update notifications (`layout_update_popup_banner.xml` & `UpdateBannerBinder.kt`).
+  - Sleek visual states: indeterminate spinner and "Connecting to GitHub...", checkmark and "Dynamic Edge AI is up to date" with smooth slide-up auto-hide (~3.5s delay), and interactive update banner when newer releases exist.
+- **In-App User-Configurable Gemini API Key:**
+  - Removed hardcoded `GEMINI_KEY` from `app/build.gradle.kts`.
+  - Added `ApiKeyManager.kt` storing API keys securely on-device in `SharedPreferences`.
+  - Added "API Key" action in slide-up menu launching Material configuration dialog (`dialog_api_key.xml`) with key masking, save, and clear actions.
+  - `CloudModelRunner.kt` seamlessly reads the user-saved key with friendly guidance when not configured.
 - **Model Manager Real-Time Download Speed & Resumption:**
   - Real-time rolling window download speed calculation (~1s update intervals; MB/s, KB/s, GB/s).
   - Dynamic ETA computation, total and downloaded byte counters, and progress bar.

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/updatePopupBanner"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_update_pill"
+    android:paddingStart="14dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp"
+    android:elevation="12dp"
+    android:layout_marginStart="16dp"
+    android:layout_marginEnd="16dp"
+    android:layout_marginTop="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:visibility="gone">
+
+    <!-- Left Icon / Spinner Container -->
+    <FrameLayout
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_marginEnd="12dp">
+
+        <!-- Indeterminate spinner while checking -->
+        <ProgressBar
+            android:id="@+id/popupProgressSpinner"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_gravity="center"
+            android:indeterminate="true"
+            android:indeterminateTint="#64B5F6" />
+
+        <!-- Status Icon (checkmark / download / warning) when finished -->
+        <ImageView
+            android:id="@+id/popupStatusIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_check_green"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- Center Content -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/txtPopupTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Checking for updates..."
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/txtPopupSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Connecting to GitHub..."
+            android:textColor="#9BA3B5"
+            android:textSize="11sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <!-- Right Badge Pill -->
+    <TextView
+        android:id="@+id/txtPopupBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_pill_badge"
+        android:text="v1.1.2"
+        android:textColor="#82B1FF"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:layout_marginStart="8dp" />
+
+    <!-- Optional Quick Dismiss Button -->
+    <ImageButton
+        android:id="@+id/btnPopupDismiss"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_close"
+        app:tint="#6D7893"
+        android:padding="4dp"
+        android:layout_marginStart="4dp"
+        android:contentDescription="Dismiss" />
+</LinearLayout>

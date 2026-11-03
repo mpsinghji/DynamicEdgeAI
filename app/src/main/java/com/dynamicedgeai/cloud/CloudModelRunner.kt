@@ -1,5 +1,6 @@
 package com.dynamicedgeai.cloud
 
+import android.content.Context
 import android.util.Base64
 import android.util.Log
 import com.dynamicedgeai.BuildConfig
@@ -8,6 +9,7 @@ import com.dynamicedgeai.ml.GeminiApi
 import com.dynamicedgeai.ml.GeminiRequest
 import com.dynamicedgeai.ml.InlineData
 import com.dynamicedgeai.ml.Part
+import com.dynamicedgeai.util.ApiKeyManager
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.HttpException
@@ -16,7 +18,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-class CloudModelRunner {
+class CloudModelRunner(private val context: Context? = null) {
 
     private val api: GeminiApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
@@ -38,10 +40,13 @@ class CloudModelRunner {
             .create(GeminiApi::class.java)
     }
 
-    suspend fun runInference(prompt: String, imagePath: String? = null): String {
-        val apiKey = BuildConfig.GEMINI_KEY
-        if (apiKey.isEmpty()) {
-            return "Error: API Key is not set in local.properties. Please add GEMINI_API_KEY='YOUR_KEY' to that file."
+    suspend fun runInference(prompt: String, imagePath: String? = null, overrideApiKey: String? = null): String {
+        val apiKey = overrideApiKey?.takeIf { it.isNotBlank() }
+            ?: context?.let { ApiKeyManager.getGeminiApiKey(it) }?.takeIf { it.isNotBlank() }
+            ?: BuildConfig.GEMINI_KEY.takeIf { it.isNotBlank() }
+
+        if (apiKey.isNullOrEmpty()) {
+            return "⚠️ Gemini API Key is not configured.\n\nPlease open the menu (bottom-right) ➔ tap 'API Key' to enter your Gemini API key from Google AI Studio."
         }
 
         return try {
